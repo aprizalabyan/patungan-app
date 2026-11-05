@@ -101,23 +101,17 @@ guessed. Key points of the contract:
 | Event list shows participants and collected amount | `EventRead` has no such fields | One `/events/{id}/summary` request per visible row (≤10 per page). **Recommended:** embed summary fields in the list response. |
 | Event search | `GET /events` supports `status` only | The title search filters only the page currently shown, and the UI says so. **Recommended:** add a `search` query param. |
 | Contribution list pagination | Paginated, max 100 | Event detail loads all pages, which is bounded because a friend can join an event only once. The paid/pending filter is applied in the browser. Counts and totals still come from the summary. |
-| Secure cookie session | Bearer JWT in the response body. CORS `allow_credentials=False` | See Authentication below. |
+| Refresh-cookie session | Prior docs described only a response-body Bearer JWT and `allow_credentials=False` | See Authentication below; backend refresh endpoints and credentialed CORS must be enabled. |
 | Public payment amounts | `PublicParticipant` exposes `name` and `payment_status` only | The public page shows only those, plus aggregate totals from the public summary. |
 
 ## Authentication
 
-- `POST /auth/login` returns a short-lived JWT (`expires_in` seconds, 60 minutes by default). The backend does not
-  support cookies, so the frontend uses the documented Bearer flow.
-- The token and its expiry are stored in **`sessionStorage`**. This storage belongs to one tab and is cleared when the
-  tab closes. Nothing goes in `localStorage`, and the password is never stored. The token is sent only on management
-  requests. Public endpoints are called with `auth: false` and `credentials: 'omit'`.
-- Any 401 on an authenticated request clears the session and the query cache, and redirects to `/login`. The user
-  returns to the page they wanted after logging in. Only same-app paths are accepted as the return target. A wrong
-  password (401 on login) shows an error and does not trigger this flow.
-- Trade-off: any token readable by JavaScript can be stolen through XSS. React escapes rendered output, and the app
-  uses no `dangerouslySetInnerHTML`. For stronger protection, the backend could issue an HttpOnly, Secure,
-  SameSite cookie, which would also need CSRF protection and `allow_credentials=True`.
-- `ProtectedRoute` is a UX guard only. Authorization is enforced by the backend on every protected endpoint.
+The frontend uses a memory-only access token and backend-managed HttpOnly refresh cookie. It refreshes on app startup,
+retries a protected request once after a 401, serializes refreshes across tabs where Web Locks is available, and
+synchronizes auth events through BroadcastChannel without transmitting credentials. Logout clears frontend state even
+if the backend request fails. See [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) for the assumed endpoint contract,
+fallback limits, cookie attributes, credentialed CORS, and CSRF requirements. The refresh contract has not been
+verified against a live backend. `ProtectedRoute` remains a UX guard; backend authorization is required.
 
 ## Privacy on public pages
 

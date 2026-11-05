@@ -103,7 +103,8 @@ Current status: 7 test files, 50 tests; 49 pass. The failing one is the URL-buil
 
 ## Security
 
-- Never log, persist or embed passwords or tokens. The token lives only in `sessionStorage` through `session.ts`.
+- Never log, persist or embed passwords or tokens. The access token lives only in memory; the refresh token is an
+  HttpOnly backend cookie and is never accessible to frontend code. See `docs/AUTHENTICATION.md`.
 - Send the token only to management endpoints (`auth: true`); public calls pass `auth: false`.
 - Only same-app paths are accepted as post-login redirect targets.
 - Client route guards are UX; assume the backend rejects unauthorized calls, and handle 401/403/404 gracefully.

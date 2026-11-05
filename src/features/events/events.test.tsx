@@ -69,7 +69,7 @@ describe('event list', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Buat acara' }))
 
     expect(await screen.findByRole('heading', { name: 'Kado Sari' })).toBeInTheDocument()
-    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+    expect(calls.find((c) => c.method === 'POST' && c.path === '/events')?.body).toEqual({
       title: 'Kado Sari',
       description: null,
       event_date: null,
@@ -168,7 +168,7 @@ describe('event detail', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Tambah peserta' }))
 
     expect(await screen.findByText('Citra Lestari')).toBeInTheDocument()
-    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ friend_id: 'f-2', amount: 200_000, notes: null })
+    expect(calls.find((c) => c.method === 'POST' && c.path === '/events/e-1/contributions')?.body).toEqual({ friend_id: 'f-2', amount: 200_000, notes: null })
     expect(await screen.findByText('Rp350.000')).toBeInTheDocument()
     expect(calls.filter((c) => c.path === '/events/e-1/summary').length).toBeGreaterThan(summaryCallsBefore)
   })

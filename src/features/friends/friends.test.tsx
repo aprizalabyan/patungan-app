@@ -46,7 +46,7 @@ describe('friends management', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Tambah teman' }))
 
     expect(await screen.findByText('Dewi')).toBeInTheDocument()
-    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ name: 'Dewi', nickname: null, phone: null })
+    expect(calls.find((c) => c.method === 'POST' && c.path === '/friends')?.body).toEqual({ name: 'Dewi', nickname: null, phone: null })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 

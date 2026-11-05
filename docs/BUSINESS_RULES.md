@@ -121,8 +121,13 @@ public events. The list is only listed, never summed.
 
 ## 9. Session
 
-- A 401 on an authenticated request clears the session and cached data and returns the user to `/login`.
+- Access tokens exist only in JavaScript memory. Refresh tokens are managed by the backend in an HttpOnly cookie; the
+  frontend never reads or persists them.
+- Startup refreshes the cookie session before protected pages render. Authenticated 401 responses cause one refresh
+  and one retry; failed refresh clears state and returns the user to `/login`.
 - After login the user returns to the page they originally requested, but only if it is an in-app path
   (open-redirect protection in `LoginPage.safeRedirect`).
-- A failed login (401 on `/auth/login`) shows an error and is **not** treated as an expired session.
-- The password is never stored; the token is stored in `sessionStorage` only. See [ARCHITECTURE.md](ARCHITECTURE.md#authentication).
+- A failed login (401 on `/auth/login`) shows an error and is **not** treated as an expired session. Login/refresh/logout
+  use credentials for the HttpOnly cookie; public requests do not.
+- Logout clears local state even if the backend request fails. Auth event names synchronize tabs without sharing tokens.
+- See [AUTHENTICATION.md](AUTHENTICATION.md) for cookie, CSRF, rotation, and browser fallback requirements.

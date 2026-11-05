@@ -7,11 +7,15 @@ export interface AuthContextValue {
    * `/auth/me` failed for a non-401 reason (e.g. network). A 401 clears the token.
    */
   status: 'loading' | 'authenticated' | 'unauthenticated' | 'error'
+  isInitializing: boolean
+  isAuthenticated: boolean
   user: User | null
   error: unknown
   retry: () => void
   login: (credentials: LoginRequest) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
+  refreshAccessToken: () => Promise<void>
+  initializeAuth: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

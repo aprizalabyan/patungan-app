@@ -14,7 +14,7 @@ from this repository (service functions, TypeScript types, tests, README).
 
 | Actor | Authenticated | Can do |
 |---|---|---|
-| Treasurer | Yes (email + password, Bearer token) | Everything below |
+| Treasurer | Yes (email + password, memory access token + HttpOnly refresh cookie) | Everything below |
 | Friend / anyone with a link | No | View public event pages, read-only |
 
 There is exactly one application user role (the treasurer). There is no sign-up page and friends do not have accounts.
@@ -86,8 +86,8 @@ See [README.md](../README.md) for setup. Key facts:
 - Node.js >= 22.22 (declared in `package.json` `engines`).
 - API base URL comes from `VITE_API_BASE_URL` (must include the API prefix, e.g. `.../api/v1`). `.env` is git-ignored;
   `.env.example` is the template.
-- The backend must allow the frontend origin for cross-origin requests and accept a `Authorization: Bearer <token>`
-  header. The frontend sends requests with `credentials: 'omit'` (no cookies).
+- The backend must allow the frontend origin and accept `Authorization: Bearer <token>`. Login, refresh and logout
+  send credentials for the HttpOnly refresh cookie; ordinary API requests omit cookies. See [AUTHENTICATION.md](AUTHENTICATION.md).
 
 ## Status and known gaps
 

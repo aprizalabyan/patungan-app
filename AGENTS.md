@@ -48,8 +48,8 @@ Run `npm run typecheck`, `npm test` and `npm run build` before declaring work fi
    there, say so and ask or document the assumption; do not guess. See [docs/API_CONVENTIONS.md](docs/API_CONVENTIONS.md).
 5. **Public pages use `/public/*` endpoints only**, never send the auth token, and render only fields the public
    types define. Never show phone numbers, notes, per-person amounts or management actions there.
-6. **Never store credentials.** The password is never persisted. The session token lives in `sessionStorage` via
-   `src/services/session.ts` and nowhere else; never use `localStorage` for it.
+6. **Never store credentials.** The password is never persisted. The access token lives only in JavaScript memory;
+   the refresh token is managed by the backend in an HttpOnly cookie. Never put either token in browser storage.
 7. **User-facing text is Indonesian. Code, identifiers, comments, routes and docs are English.**
 8. **No `any`** unless there is a documented reason in a comment. No new dependency without a clear reason.
 9. **Client-side route guards are UX only.** Authorization is enforced by the backend. Never rely on
@@ -70,9 +70,12 @@ Run `npm run typecheck`, `npm test` and `npm run build` before declaring work fi
 - **API base URL default mismatch.** `src/services/config.ts` falls back to
   `<current protocol>//<current hostname>:8001/api/v1` when `VITE_API_BASE_URL` is unset, but `README.md` and
   `.env.example` still say `http://localhost:8000/api/v1`. Set `VITE_API_BASE_URL` explicitly in `.env`.
-- **One failing test** follows from that: `src/services/apiClient.test.ts` ("builds URLs and drops empty query values")
-  expects `http://localhost:8000/api/v1/...` but receives `:8001`. The other 49 tests pass. Decide which port is
-  intended, then align the code default, `.env.example`, README and that test together.
+  - **API port mismatch remains in setup docs:** the code and URL test use port 8001 while README and `.env.example`
+    say port 8000. Set `VITE_API_BASE_URL` explicitly until the intended default is decided.
+  - **Refresh backend contract not verified.** The previous repository-derived contract did not describe refresh,
+    logout or credentialed cookies. The frontend implementation follows `docs/AUTHENTICATION.md` assumptions and has
+    only been tested with mocked responses.
+  - The frontend test suite currently has 51 passing tests; it has not been exercised against a live backend.
 - **Not verified end-to-end.** The app has only been tested against mocked responses, not a running backend.
 
 When you fix or discover an issue, update this list.

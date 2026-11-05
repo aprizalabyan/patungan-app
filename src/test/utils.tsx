@@ -14,6 +14,7 @@ export interface RecordedCall {
   query: URLSearchParams
   body: unknown
   headers: Record<string, string>
+  credentials?: RequestCredentials
 }
 
 type Reply = { status?: number; body?: unknown } | ((call: RecordedCall) => { status?: number; body?: unknown })
@@ -34,9 +35,16 @@ export function mockApi(routes: Record<string, Reply>) {
       query: url.searchParams,
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
       headers: (init?.headers ?? {}) as Record<string, string>,
+      credentials: init?.credentials,
     }
     calls.push(call)
-    const route = routes[`${method} ${path}`]
+    let route = routes[`${method} ${path}`]
+    if (!route && method === 'POST' && path === '/auth/refresh') {
+      route = session.getToken()
+        ? { body: { access_token: 'refreshed-test-token', token_type: 'bearer', expires_in: 3600 } }
+        : apiError(401, 'not_authenticated')
+    }
+    if (!route && method === 'POST' && path === '/auth/logout') route = { status: 204 }
     if (!route) throw new Error(`Unmocked request: ${method} ${path}`)
     const { status = 200, body } = typeof route === 'function' ? route(call) : route
     return new Response(status === 204 || body === undefined ? null : JSON.stringify(body), {
@@ -62,7 +70,7 @@ function LocationProbe() {
 }
 
 export function renderApp(route: string, { loggedIn = false }: { loggedIn?: boolean } = {}) {
-  if (loggedIn) session.set('test-token', 3600)
+  if (loggedIn) session.set('test-token')
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 0 }, mutations: { retry: false } },
   })

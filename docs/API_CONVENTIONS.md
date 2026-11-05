@@ -13,8 +13,9 @@ backend owner, and then update `src/types/api.ts` and this file. **Do not guess 
   README and `.env.example` still document `http://localhost:8000/api/v1`; this mismatch is a known issue. Always set
   `VITE_API_BASE_URL` explicitly. `VITE_*` values are inlined at build time; never put secrets in them.
 - JSON in and out. Requests send `Accept: application/json`, and `Content-Type: application/json` when there is a body.
-- `credentials: 'omit'`: no cookies. Authentication is a `Authorization: Bearer <token>` header, so the backend must
-  allow that header (and the frontend origin) for cross-origin calls.
+- Normal API requests use `credentials: 'omit'` and `Authorization: Bearer <memory access token>`. Login, refresh and
+  logout use `credentials: 'include'` for the backend-managed HttpOnly refresh cookie. Cross-origin cookie requests
+  require credentialed CORS. See [AUTHENTICATION.md](AUTHENTICATION.md).
 - `204` responses and empty bodies resolve to `undefined`.
 
 ## The single entry point: `apiRequest`
@@ -27,9 +28,9 @@ apiRequest<T>(path, { method?, body?, query?, auth?, signal? }): Promise<T>
 
 - `method`: `GET` (default) | `POST` | `PATCH` | `DELETE`.
 - `query`: `undefined`, `null` and `''` values are dropped.
-- `auth` (default `true`): attach the Bearer token if one is stored. Pass `false` for login and `/public/*`.
+- `auth` (default `true`): attach the in-memory Bearer token. Pass `false` for login, refresh, logout and `/public/*`.
 - Failures: network error → `NetworkError`; non-2xx → `ApiError`; aborted → the original `AbortError` is re-thrown.
-- 401 on an authenticated request → session cleared and the unauthorized handler runs (see ARCHITECTURE.md).
+- 401 on an authenticated request → one refresh attempt, then one retry; login, refresh, logout and public paths are excluded. See [AUTHENTICATION.md](AUTHENTICATION.md).
 
 Never call `fetch` anywhere else. UI code uses hooks in `src/features/*`, which call the per-resource service objects.
 
@@ -41,7 +42,9 @@ Paths are relative to the base URL. "Auth" = needs Bearer token. Service functio
 
 | Method & path | Auth | Service | Request → Response |
 |---|---|---|---|
-| `POST /auth/login` | no | `login` | `LoginRequest {email, password}` → `TokenResponse {access_token, token_type, expires_in}` |
+| `POST /auth/login` | no | `login` | `LoginRequest {email, password}` → `TokenResponse {access_token, token_type, expires_in}`; credentials included; sets refresh cookie |
+| `POST /auth/refresh` | no | `refresh` | no body → assumed `TokenResponse`; credentials included; rotates refresh cookie |
+| `POST /auth/logout` | no | `logout` | no body → success/204; credentials included; revokes current refresh session |
 | `GET /auth/me` | yes | `me` | → `User {id, name, email, created_at}` |
 
 ### Friends (`friendsService`)
@@ -152,7 +155,7 @@ more client workarounds.
 | Participants and collected amount in the event list | `Event` has neither | One `/events/{id}/summary` request per visible row (≤ 10). Recommended: embed summary fields in list items. |
 | Event text search | `GET /events` accepts `status` only | Title search filters the current page only, and the UI says so. Recommended: a `search` parameter. |
 | Paid/pending filter on participants | Endpoint accepts `payment_status` | The UI loads all participants and filters in the browser; counts and totals still come from the summary. |
-| Cookie-based session | Bearer token in response body | `sessionStorage` token (see ARCHITECTURE.md). An HttpOnly cookie would need backend support (and CSRF protection). |
+| Cookie-based refresh session | Not documented in the prior backend-derived contract | Implemented per requested contract; refresh/logout and credentialed CORS must be confirmed with backend owner (see [AUTHENTICATION.md](AUTHENTICATION.md)) |
 
 ## Not known from the frontend
 

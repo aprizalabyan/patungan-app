@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { TextField } from '@/components/ui/FormField'
 import { InlineError } from '@/components/ui/States'
+import { LoadingState } from '@/components/ui/Spinner'
 import { useAuth } from '@/features/auth/authContext'
 import type { LoginRedirectState } from '@/features/auth/ProtectedRoute'
 import { getErrorMessage } from '@/services/errors'
@@ -29,6 +30,7 @@ export function LoginPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  if (status === 'loading') return <div className="min-h-screen"><LoadingState label="Memeriksa sesi…" /></div>
   if (status === 'authenticated' && !submitting) return <Navigate to={redirectTo} replace />
 
   async function handleSubmit(e: FormEvent) {

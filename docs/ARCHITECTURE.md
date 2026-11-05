@@ -74,25 +74,12 @@ for public links. List state (page, filters, search, `new` flag) lives in the qu
 Files: `services/session.ts`, `services/apiClient.ts`, `services/authService.ts`,
 `features/auth/{AuthProvider,authContext,ProtectedRoute}.tsx`, `pages/LoginPage.tsx`.
 
-Flow:
-
-1. `LoginPage` validates, then `useAuth().login()` calls `POST /auth/login`. The response holds `access_token` and
-   `expires_in` (seconds). `AuthProvider.login` clears the query cache, then `session.set(token, expires_in)`.
-2. `session` stores `{token, expiresAt}` in **`sessionStorage`** (key `patungan.session`), expiring 30 seconds early.
-   `getToken()` is side-effect free so it can be a `useSyncExternalStore` snapshot; `subscribe` notifies listeners.
-   The password is never stored. `localStorage` is not used for auth.
-3. `AuthProvider` exposes `status`: `loading` (token present, `/auth/me` in flight), `authenticated`,
-   `unauthenticated` (no token), or `error` (token present but `/auth/me` failed for a non-401 reason; `retry()`
-   available), plus `user`, `login`, `logout`.
-4. `ProtectedRoute` redirects `unauthenticated` to `/login` with `state.from = path + search`, shows a spinner while
-   `loading`, an error with retry on `error`, otherwise renders the outlet.
-5. `apiRequest` adds `Authorization: Bearer <token>` when `auth !== false` and a token exists. On a **401 to an
-   authenticated request** it clears the session and calls the registered unauthorized handler, which clears the
-   query cache and shows an info toast. The guard then redirects to `/login`.
-6. Logout: `session.clear()` + `queryClient.clear()` + navigate to `/login`.
-
-Rules: public endpoints and `login` pass `auth: false`; requests use `credentials: 'omit'`; the post-login redirect
-target must be an in-app path starting with a single `/`.
+Authentication now uses the refresh-cookie contract documented in [AUTHENTICATION.md](AUTHENTICATION.md). Access
+tokens live in per-tab JavaScript memory only. Login, refresh and logout requests include cookies; ordinary API
+requests omit cookies and attach the in-memory Bearer token. Initialization refreshes the cookie session before any
+protected route renders, then loads `/auth/me`. A 401 on a protected request triggers one shared refresh and retries
+the request once. Web Locks serialize refreshes across tabs; the legacy fallback is best-effort and documented with
+its limits. The post-login redirect target remains an in-app path starting with a single `/`.
 
 ## Data fetching (TanStack Query)
 
