@@ -28,14 +28,16 @@ cp .env.example .env      # adjust VITE_API_BASE_URL if needed
 npm run dev               # http://localhost:5173
 ```
 
-Start the backend separately (see its README). Its `CORS_ORIGINS` must include the frontend origin, e.g.
-`http://localhost:5173`. The treasurer account is created on the backend with `python -m app.cli create-treasurer`.
+Start the backend separately (see its README). Vite proxies `/api/v1` to `API_PROXY_TARGET` (default
+`http://localhost:8001`). The treasurer account is created on the backend with `python -m app.cli create-treasurer`.
 
 ## Environment
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | Backend base URL **including** the `/api/v1` prefix |
+| `VITE_API_BASE_URL` | `/api/v1` | Same-origin API path; leave this as `/api/v1` to use the proxy |
+| `API_PROXY_TARGET` | `http://localhost:8001` | Local Vite proxy target (backend origin) |
+| `BACKEND_API_URL` | — | Vercel server-only variable: backend API base URL including `/api/v1` |
 
 `VITE_*` variables are inlined at build time, so set it before `npm run build`. Never put secrets in them.
 
@@ -50,7 +52,10 @@ Start the backend separately (see its README). Its `CORS_ORIGINS` must include t
 | `npm test` | Run the test suite once (Vitest + Testing Library, jsdom) |
 | `npm run test:watch` | Tests in watch mode |
 
-The app uses client-side routing; configure the production host to serve `index.html` for unknown paths.
+The app uses client-side routing. `vercel.json` rewrites page paths to `index.html`, while `api/[...path].ts` proxies
+`/api/v1/*` requests to the server-only `BACKEND_API_URL`. Configure `BACKEND_API_URL` in Vercel project settings,
+including the `/api/v1` prefix. Keep `VITE_API_BASE_URL` as `/api/v1`; never put the private backend origin in a
+`VITE_*` variable.
 
 ## Project structure
 

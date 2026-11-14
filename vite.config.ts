@@ -9,6 +9,14 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
+  server: {
+    proxy: {
+      '/api/v1': {
+        target: process.env.API_PROXY_TARGET,
+        changeOrigin: true,
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

@@ -97,9 +97,7 @@ The shell on Windows may be PowerShell or Git Bash; npm scripts work in both.
 - A test should fail for the right reason. Don't weaken or delete a failing test to make the suite pass; fix the
   cause or raise it.
 
-Current status: 7 test files, 50 tests; 49 pass. The failing one is the URL-building test in
-`src/services/apiClient.test.ts` (expects port 8000, the code default is port 8001). See Known issues in
-[AGENTS.md](../AGENTS.md).
+Tests use mocked API responses and have not been exercised against a live backend.
 
 ## Security
 

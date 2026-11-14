@@ -7,7 +7,7 @@ import { session } from './session'
 describe('apiClient', () => {
   it('builds URLs and drops empty query values', () => {
     expect(buildUrl('/friends', { search: '', page: 2, status: undefined })).toBe(
-      'http://localhost:8001/api/v1/friends?page=2',
+      '/api/v1/friends?page=2',
     )
   })
 

@@ -9,9 +9,11 @@ backend owner, and then update `src/types/api.ts` and this file. **Do not guess 
 
 - Base URL: `API_BASE_URL` in `src/services/config.ts` = `VITE_API_BASE_URL` (trimmed, trailing slashes removed). It
   must include the API prefix (e.g. `https://host/api/v1`).
-- If the variable is unset, the code falls back to `<window.location.protocol>//<window.location.hostname>:8001/api/v1`.
-  README and `.env.example` still document `http://localhost:8000/api/v1`; this mismatch is a known issue. Always set
-  `VITE_API_BASE_URL` explicitly. `VITE_*` values are inlined at build time; never put secrets in them.
+- If the variable is unset, the code uses `/api/v1`. Vite proxies this path to `API_PROXY_TARGET` (default
+  `http://localhost:8001`) in development. On Vercel, `api/[...path].ts` proxies it to the server-only
+  `BACKEND_API_URL`, which must include `/api/v1`. Do not put the backend URL in a `VITE_*` variable when using this
+  proxy; Vite exposes those values in the browser bundle. The backend origin is not exposed to browser requests, but
+  the same-origin proxy routes remain publicly reachable and still require backend authentication/authorization.
 - JSON in and out. Requests send `Accept: application/json`, and `Content-Type: application/json` when there is a body.
 - Normal API requests use `credentials: 'omit'` and `Authorization: Bearer <memory access token>`. Login, refresh and
   logout use `credentials: 'include'` for the backend-managed HttpOnly refresh cookie. Cross-origin cookie requests

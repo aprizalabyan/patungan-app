@@ -67,15 +67,12 @@ Run `npm run typecheck`, `npm test` and `npm run build` before declaring work fi
 
 ## Known issues (as of the last documentation update)
 
-- **API base URL default mismatch.** `src/services/config.ts` falls back to
-  `<current protocol>//<current hostname>:8001/api/v1` when `VITE_API_BASE_URL` is unset, but `README.md` and
-  `.env.example` still say `http://localhost:8000/api/v1`. Set `VITE_API_BASE_URL` explicitly in `.env`.
-  - **API port mismatch remains in setup docs:** the code and URL test use port 8001 while README and `.env.example`
-    say port 8000. Set `VITE_API_BASE_URL` explicitly until the intended default is decided.
+- **API proxy target must be configured for deployment.** Set the server-only `BACKEND_API_URL` to the backend API
+  URL including `/api/v1` in Vercel project environment settings. The browser uses the same-origin `/api/v1` route.
   - **Refresh backend contract not verified.** The previous repository-derived contract did not describe refresh,
     logout or credentialed cookies. The frontend implementation follows `docs/AUTHENTICATION.md` assumptions and has
     only been tested with mocked responses.
-  - The frontend test suite currently has 51 passing tests; it has not been exercised against a live backend.
+- The frontend test suite uses mocked responses and has not been exercised against a live backend.
 - **Not verified end-to-end.** The app has only been tested against mocked responses, not a running backend.
 
 When you fix or discover an issue, update this list.

@@ -26,8 +26,10 @@ type Reply = { status?: number; body?: unknown } | ((call: RecordedCall) => { st
 export function mockApi(routes: Record<string, Reply>) {
   const calls: RecordedCall[] = []
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = new URL(String(input))
-    const path = url.href.slice(API_BASE_URL.length).split('?')[0]
+    const url = new URL(String(input), window.location.origin)
+    const path = url.pathname.slice(API_BASE_URL.startsWith('/')
+      ? API_BASE_URL.length
+      : new URL(API_BASE_URL).pathname.length)
     const method = (init?.method ?? 'GET').toUpperCase()
     const call: RecordedCall = {
       method,
