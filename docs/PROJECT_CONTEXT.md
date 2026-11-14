@@ -93,8 +93,8 @@ See [README.md](../README.md) for setup. Key facts:
 
 - Implemented: all pages above, with loading, empty, error and validation states, and 50 automated tests.
 - **Not verified against a running backend.** Tests use mocked `fetch`.
-- API requests use the same-origin `/api/v1` path. Vite proxies it locally; Vercel uses `api/[...path].ts` and the
-  server-only `BACKEND_API_URL` environment variable for production.
+- API requests use the same-origin `/api/v1` path. Vite proxies it locally; on Vercel, `vercel.json` routes it to
+  `api/proxy.ts`, which uses the server-only `BACKEND_API_URL` environment variable.
 - **Backend contract gaps worked around in the UI** (see [API_CONVENTIONS.md](API_CONVENTIONS.md#contract-gaps-and-workarounds)):
   no dashboard aggregate endpoint, no per-event totals in the event list, no event text search.
 - Old Indonesian URLs (`/masuk`, `/acara`, `/teman`, `/publik`) no longer exist; links shared with the old

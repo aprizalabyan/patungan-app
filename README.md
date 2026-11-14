@@ -52,10 +52,9 @@ Start the backend separately (see its README). Vite proxies `/api/v1` to `API_PR
 | `npm test` | Run the test suite once (Vitest + Testing Library, jsdom) |
 | `npm run test:watch` | Tests in watch mode |
 
-The app uses client-side routing. `vercel.json` rewrites page paths to `index.html`, while `api/[...path].ts` proxies
-`/api/v1/*` requests to the server-only `BACKEND_API_URL`. Configure `BACKEND_API_URL` in Vercel project settings,
-including the `/api/v1` prefix. Keep `VITE_API_BASE_URL` as `/api/v1`; never put the private backend origin in a
-`VITE_*` variable.
+The app uses client-side routing. `vercel.json` routes `/api/v1/*` requests to `api/proxy.ts` and rewrites other
+page paths to `index.html`. Configure the server-only `BACKEND_API_URL` in Vercel project settings, including the
+`/api/v1` prefix. Keep `VITE_API_BASE_URL` as `/api/v1`; never put the private backend origin in a `VITE_*` variable.
 
 ## Project structure
 
