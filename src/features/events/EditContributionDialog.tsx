@@ -38,6 +38,7 @@ function EditForm({
   onCancel: () => void
   onSubmit: (id: string, body: ContributionUpdate) => Promise<unknown>
 }) {
+  const locked = contribution.payment_status === 'paid'
   const [amount, setAmount] = useState(formatAmountInput(String(contribution.amount)))
   const [notes, setNotes] = useState(contribution.notes ?? '')
   const [errors, setErrors] = useState<FieldErrors<'amount' | 'notes'>>({})
@@ -47,7 +48,7 @@ function EditForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const v = {
-      amount: validateAmount(amount),
+      amount: locked ? undefined : validateAmount(amount),
       notes: notes.trim().length > 500 ? 'Catatan maksimal 500 karakter.' : undefined,
     }
     setErrors(v)
@@ -55,8 +56,17 @@ function EditForm({
     if (hasErrors(v)) return
     setSubmitting(true)
     try {
-      // Amount/notes changes never touch payment status on the backend.
-      await onSubmit(contribution.id, { amount: parseRupiahInput(amount)!, notes: emptyToNull(notes) })
+      // Send only what changed. Never send payment_status (the backend owns it), and never the
+      // amount of a paid contribution (it is locked until the payment is cancelled).
+      const changes: ContributionUpdate = {}
+      const newAmount = parseRupiahInput(amount)!
+      if (!locked && newAmount !== contribution.amount) changes.amount = newAmount
+      if (emptyToNull(notes) !== contribution.notes) changes.notes = emptyToNull(notes)
+      if (Object.keys(changes).length === 0) {
+        onCancel()
+        return
+      }
+      await onSubmit(contribution.id, changes)
     } catch (err) {
       setSubmitError(getErrorMessage(err, 'Gagal menyimpan perubahan.'))
     } finally {
@@ -66,7 +76,19 @@ function EditForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
-      <AmountField label="Nominal iuran (Rp)" required value={amount} onChange={setAmount} error={errors.amount} />
+      <AmountField
+        label="Nominal iuran (Rp)"
+        required
+        value={amount}
+        onChange={setAmount}
+        error={errors.amount}
+        disabled={locked}
+        hint={
+          locked
+            ? 'Nominal terkunci karena iuran sudah dibayar. Batalkan pembayaran terlebih dahulu untuk mengubahnya.'
+            : undefined
+        }
+      />
       <TextAreaField
         label="Catatan"
         value={notes}

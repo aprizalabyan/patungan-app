@@ -11,7 +11,9 @@ export type ISODate = string
 export type ISODateTime = string
 
 export type EventStatus = 'active' | 'completed'
+/** Set by the backend only: `pending` until a payment is recorded, `paid` after. There is nothing in between. */
 export type PaymentStatus = 'pending' | 'paid'
+export type PaymentAccountType = 'bank' | 'e_wallet' | 'cash'
 
 export interface Page<T> {
   items: T[]
@@ -110,20 +112,41 @@ export interface EventListParams extends PageParams {
   status?: EventStatus
 }
 
-/**
- * Backend-computed aggregates. `total_collected` counts paid contributions only.
- * `progress_percent` is floor(collected*100/target), not capped at 100, and null
- * when the target is missing or zero.
- */
-export interface EventSummary {
+/** The eight fields shared by the treasurer and the public summary. */
+export interface PublicEventSummary {
   event_id: UUID
   total_participants: number
   paid_count: number
   pending_count: number
+  /** Legacy alias of `total_received`. */
   total_collected: number
+  /** Still owed: the bills of the pending contributions. */
   total_pending: number
   target_amount: number | null
+  /** floor(received*100/target), not capped at 100, null when the target is missing or zero. */
   progress_percent: number | null
+}
+
+/** One row of the per-account receipts breakdown; identity is the account's *current* one. */
+export interface SummaryPaymentAccount {
+  id: UUID
+  provider_name: string
+  type: PaymentAccountType
+  total_received: number
+}
+
+/**
+ * Treasurer-only summary. Every figure is computed by the backend;
+ * `total_contributions == total_received + total_pending`.
+ */
+export interface EventSummary extends PublicEventSummary {
+  /** Sum of all contribution bills. */
+  total_contributions: number
+  /** Sum of the bills of the paid contributions. */
+  total_received: number
+  payment_accounts: SummaryPaymentAccount[]
+  /** Received through paid contributions that have no account (legacy data). */
+  unassigned_total: number
 }
 
 // --- Contributions -----------------------------------------------------------
@@ -133,9 +156,14 @@ export interface Contribution {
   event_id: UUID
   friend_id: UUID
   friend: FriendBrief
+  /** The bill. A paid contribution's payment always equals this amount. */
   amount: number
   payment_status: PaymentStatus
+  /** Set only while paid. */
   paid_at: ISODateTime | null
+  /** Snapshot of the account taken when paid; null while pending (and for legacy paid data). */
+  payment_account: PaymentAccountSnapshot | null
+  payment_notes: string | null
   notes: string | null
   created_at: ISODateTime
   updated_at: ISODateTime
@@ -147,15 +175,84 @@ export interface ContributionCreate {
   notes?: string | null
 }
 
-/** `amount` and `payment_status` may be omitted but must not be null. */
+/**
+ * `amount` may be omitted but must not be null, and is locked while the contribution is paid.
+ * Send only changed fields. The app never sends `payment_status` (422 when it differs).
+ */
 export interface ContributionUpdate {
   amount?: number
-  payment_status?: PaymentStatus
   notes?: string | null
 }
 
 export interface ContributionListParams extends PageParams {
   payment_status?: PaymentStatus
+}
+
+// --- Payment accounts ---------------------------------------------------------
+
+/** A treasurer-owned bank / e-wallet account. `provider_name` is free text (BRI, DANA, ...). */
+export interface PaymentAccount {
+  id: UUID
+  type: PaymentAccountType
+  provider_name: string
+  account_name: string
+  /** A string so leading zeros survive; `null` for cash accounts, which have no number. */
+  account_number: string | null
+  label: string | null
+  is_active: boolean
+  created_at: ISODateTime
+  updated_at: ISODateTime
+}
+
+/**
+ * `bank` / `e_wallet` need `provider_name` and `account_number`. `cash` needs only `account_name` (the
+ * holder): the backend fixes the provider to "Cash" and rejects a number, so the app sends neither.
+ */
+export interface PaymentAccountCreate {
+  type: PaymentAccountType
+  provider_name?: string
+  account_name: string
+  account_number?: string
+  label?: string | null
+}
+
+/** All fields optional; send only what changed. `label` may be cleared with null. */
+export type PaymentAccountUpdate = Partial<PaymentAccountCreate>
+
+export interface PaymentAccountListParams {
+  is_active?: boolean
+  type?: PaymentAccountType
+}
+
+/** Body of `PUT /events/{id}/payment-accounts`: replaces the whole set. */
+export interface EventPaymentAccountsUpdate {
+  payment_account_ids: UUID[]
+}
+
+// --- Contribution payment (one per contribution) -------------------------------
+
+/** Account details frozen onto the contribution at the moment it was paid. */
+export interface PaymentAccountSnapshot {
+  id: UUID
+  type: PaymentAccountType
+  provider_name: string
+  account_name: string
+  /** `null` for cash. */
+  account_number: string | null
+  label: string | null
+}
+
+/** Body of `PATCH /contributions/{id}/payment`. There is deliberately no amount: it is the bill. */
+export interface ContributionPaymentRecord {
+  payment_account_id: UUID
+  /** Must be timezone-aware (e.g. `2026-11-15T14:00:00+07:00`). Defaults to now on the backend. */
+  paid_at?: ISODateTime
+  notes?: string | null
+}
+
+/** Body of `POST /contributions/{id}/payment/cancel`; the whole body is optional. */
+export interface ContributionPaymentCancel {
+  reason?: string
 }
 
 // --- Public (allow-listed, unauthenticated) ----------------------------------

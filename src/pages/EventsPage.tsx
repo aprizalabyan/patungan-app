@@ -62,7 +62,7 @@ export function EventsPage() {
       className: 'tabular-nums whitespace-nowrap md:text-right',
       cell: (e) => {
         const s = summaries.byId.get(e.id)
-        return s ? formatRupiah(s.total_collected) : '…'
+        return s ? formatRupiah(s.total_received) : '…'
       },
     },
   ]

@@ -8,6 +8,7 @@ const NAV = [
   { to: '/', label: 'Dasbor', end: true },
   { to: '/events', label: 'Acara', end: false },
   { to: '/friends', label: 'Teman', end: false },
+  { to: '/payment-accounts', label: 'Rekening', end: false },
 ]
 
 export function AppLayout() {

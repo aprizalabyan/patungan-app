@@ -22,6 +22,13 @@ describe('buildWhatsAppSummary', () => {
     expect(text).toContain('https://patungan.test/public/events/e-1')
   })
 
+  it('reports the backend counts and the amount still owed, without any partial group', () => {
+    const text = buildWhatsAppSummary(makeEvent(), makeSummary(), [makeContribution()], null)
+    expect(text).toContain('Belum masuk: Rp150.000')
+    expect(text).toContain('Peserta: 2 (1 lunas, 1 belum bayar)')
+    expect(text).not.toContain('sebagian')
+  })
+
   it('omits the link for private events', () => {
     const text = buildWhatsAppSummary(makeEvent({ is_public: false }), makeSummary(), [], null)
     expect(text).not.toContain('Cek status')

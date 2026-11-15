@@ -1,22 +1,20 @@
 import { PaymentStatusBadge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import type { Contribution, PaymentStatus } from '@/types/api'
+import type { Contribution } from '@/types/api'
 import { formatDateTime, formatRupiah } from '@/utils/format'
 
 interface ContributionsTableProps {
   contributions: Contribution[]
-  /** Id of the row whose status change is in flight. */
-  pendingId: string | null
-  onToggleStatus: (c: Contribution, next: PaymentStatus) => void
+  /** Opens the dialog that records, shows or cancels the row's payment. */
+  onPayments: (c: Contribution) => void
   onEdit: (c: Contribution) => void
   onDelete: (c: Contribution) => void
 }
 
 export function ContributionsTable({
   contributions,
-  pendingId,
-  onToggleStatus,
+  onPayments,
   onEdit,
   onDelete,
 }: ContributionsTableProps) {
@@ -57,35 +55,30 @@ export function ContributionsTable({
       header: 'Aksi',
       hideMobileLabel: true,
       className: 'md:text-right',
-      cell: (c) => {
-        const next: PaymentStatus = c.payment_status === 'paid' ? 'pending' : 'paid'
-        return (
-          <div className="flex w-full flex-wrap gap-2 pt-1 md:justify-end md:pt-0">
-            <Button
-              size="sm"
-              variant={next === 'paid' ? 'primary' : 'secondary'}
-              loading={pendingId === c.id}
-              disabled={pendingId !== null && pendingId !== c.id}
-              onClick={() => onToggleStatus(c, next)}
-              aria-label={`${next === 'paid' ? 'Tandai lunas' : 'Tandai belum bayar'}: ${c.friend.name}`}
-            >
-              {next === 'paid' ? 'Tandai lunas' : 'Batalkan lunas'}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => onEdit(c)} aria-label={`Ubah iuran ${c.friend.name}`}>
-              Ubah
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-red-700 hover:bg-red-50"
-              onClick={() => onDelete(c)}
-              aria-label={`Hapus ${c.friend.name} dari acara`}
-            >
-              Hapus
-            </Button>
-          </div>
-        )
-      },
+      cell: (c) => (
+        <div className="flex w-full flex-wrap gap-2 pt-1 md:justify-end md:pt-0">
+          <Button
+            size="sm"
+            variant={c.payment_status === 'paid' ? 'secondary' : 'primary'}
+            onClick={() => onPayments(c)}
+            aria-label={`${c.payment_status === 'paid' ? 'Lihat pembayaran' : 'Catat pembayaran'} ${c.friend.name}`}
+          >
+            {c.payment_status === 'paid' ? 'Lihat pembayaran' : 'Catat pembayaran'}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => onEdit(c)} aria-label={`Ubah iuran ${c.friend.name}`}>
+            Ubah
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-red-700 hover:bg-red-50"
+            onClick={() => onDelete(c)}
+            aria-label={`Hapus ${c.friend.name} dari acara`}
+          >
+            Hapus
+          </Button>
+        </div>
+      ),
     },
   ]
 

@@ -87,7 +87,7 @@ describe('login and protected routes', () => {
       },
       'GET /events/e-1/summary': { body: makeSummary() },
       'GET /events/e-2/summary': {
-        body: makeSummary({ event_id: 'e-2', total_collected: 500_000, total_pending: 0, total_participants: 5 }),
+        body: makeSummary({ event_id: 'e-2', total_received: 500_000, total_pending: 0, total_participants: 5 }),
       },
     })
     renderApp('/', { loggedIn: true })

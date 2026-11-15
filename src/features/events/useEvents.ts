@@ -124,6 +124,7 @@ export function useDeleteEvent() {
       qc.removeQueries({ queryKey: queryKeys.events.detail(eventId) })
       qc.removeQueries({ queryKey: queryKeys.events.summary(eventId) })
       qc.removeQueries({ queryKey: queryKeys.events.contributions(eventId) })
+      qc.removeQueries({ queryKey: queryKeys.events.paymentAccounts(eventId) })
       invalidateEventLists(qc)
     },
   })
@@ -166,6 +167,13 @@ export function invalidateContributionData(qc: QueryClient, eventId: string) {
   ])
 }
 
+/** Shows the server's row (status, paid_at, account snapshot) at once; the refetch reconciles it. */
+export function applyContributionRow(qc: QueryClient, eventId: string, updated: Contribution) {
+  qc.setQueriesData<Page<Contribution>>({ queryKey: queryKeys.events.contributions(eventId) }, (page) =>
+    page && { ...page, items: page.items.map((c) => (c.id === updated.id ? updated : c)) },
+  )
+}
+
 export function useAddContribution(eventId: string) {
   const qc = useQueryClient()
   return useMutation({
@@ -180,15 +188,7 @@ export function useUpdateContribution(eventId: string) {
     mutationFn: ({ id, body }: { id: string; body: ContributionUpdate }) =>
       contributionsService.update(id, body),
     onSuccess: (updated) => {
-      // Show the server's row (incl. paid_at) immediately, then reconcile.
-      qc.setQueriesData<Page<Contribution>>(
-        { queryKey: queryKeys.events.contributions(eventId) },
-        (page) =>
-          page && {
-            ...page,
-            items: page.items.map((c) => (c.id === updated.id ? updated : c)),
-          },
-      )
+      applyContributionRow(qc, eventId, updated)
       return invalidateContributionData(qc, eventId)
     },
   })

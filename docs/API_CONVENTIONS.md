@@ -74,13 +74,33 @@ Paths are relative to the base URL. "Auth" = needs Bearer token. Service functio
 | `PATCH /contributions/{contribution_id}` | `update` | `ContributionUpdate` → `Contribution` |
 | `DELETE /contributions/{contribution_id}` | `remove` | → 204 |
 
+### Payment accounts and the contribution payment (`paymentsService.ts`), all authenticated
+
+Contract source: `BE/docs/API_CONVENTIONS.md` and `BE/docs/BUSINESS_RULES.md`. `apiRequest` supports `PUT` for the event set.
+
+| Method & path | Service | Request → Response |
+|---|---|---|
+| `GET /payment-accounts` | `paymentAccountsService.list` | query `{is_active?, type?}` → `PaymentAccount[]` (not paginated) |
+| `POST /payment-accounts` | `create` | `PaymentAccountCreate {type, provider_name?, account_name, account_number?, label?}` → `PaymentAccount`. `bank`/`e_wallet` need provider and number; `cash` needs only `account_name` and the app sends neither provider nor number (the backend sets the provider to `Cash` and `account_number` is `null` in responses and snapshots) |
+| `PATCH /payment-accounts/{id}` | `update` | `PaymentAccountUpdate` (changed fields only) → `PaymentAccount` |
+| `PATCH /payment-accounts/{id}/status` | `setActive` | `{is_active}` → `PaymentAccount` |
+| `GET /events/{event_id}/payment-accounts` | `eventPaymentAccountsService.list` | → `PaymentAccount[]` (only accounts currently available to the event) |
+| `PUT /events/{event_id}/payment-accounts` | `replace` | `{payment_account_ids}` → `PaymentAccount[]`; replaces the set |
+| `PATCH /contributions/{id}/payment` | `contributionPaymentService.record` | `ContributionPaymentRecord {payment_account_id, paid_at?, notes?}` → `Contribution` (no amount: the payment is the bill) |
+| `POST /contributions/{id}/payment/cancel` | `cancel` | optional `{reason?}` (no body when empty) → `Contribution` (back to `pending`) |
+
+There is no DELETE for accounts or payments. `Contribution` carries the payment itself: `paid_at`, `payment_account`
+(snapshot taken when paid, `null` while pending and for legacy data) and `payment_notes`. `payment_status` is only
+`pending | paid`. There is no payment list endpoint, no `paid_amount` and no multi-payment or void endpoint (removed
+from the backend). `GET /events/{id}/summary` returns `EventSummary` (public summary: `PublicEventSummary`).
+
 ### Public (`publicService`), no auth, read-only
 
 | Method & path | Service | Request → Response |
 |---|---|---|
 | `GET /public/events` | `listEvents` | query `PublicEventListParams {page?, page_size?, status?}` → `Page<PublicEvent>` |
 | `GET /public/events/{event_id}` | `getEvent` | → `PublicEventDetail` (event + `participants: {name, payment_status}[]`) |
-| `GET /public/events/{event_id}/summary` | `getSummary` | → `EventSummary` |
+| `GET /public/events/{event_id}/summary` | `getSummary` | → `PublicEventSummary` |
 
 ## Types
 
@@ -90,7 +110,7 @@ All API types are in **`src/types/api.ts`**. Conventions:
 - Field names are `snake_case` exactly as on the wire; do not rename or camel-case them.
 - Nullable fields are typed `T | null`. In request types, optional fields use `?`.
 - PATCH semantics (from type comments): fields may be omitted to leave them unchanged. `name` (friend), `title`,
-  `status`, `is_public` (event), and `amount`, `payment_status` (contribution) must not be sent as `null`. Nullable
+  `status`, `is_public` (event), and `amount` (contribution) must not be sent as `null`. The app never sends `payment_status`. Nullable
   fields (`description`, `event_date`, `target_amount`, `nickname`, `phone`, `notes`) are cleared by sending `null`.
 - Pagination: `Page<T> = {items, total, page, page_size}`; `page` is 1-based. `MAX_PAGE_SIZE = 100` and
   `DEFAULT_PAGE_SIZE = 20` live in `src/services/constants.ts`. Page sizes used: events 10, friends 20, public events 10,
@@ -131,6 +151,14 @@ Error codes the frontend knows about:
 | `duplicate_contribution` | 409 | "Teman ini sudah terdaftar di acara ini." |
 | `friend_in_use` | 409 | Friend has history; cannot delete. `details.contributions?: number` is used in the dialog message |
 | `validation_error` | 422 | Generic message plus per-field errors |
+| `payment_account_inactive` | 409 | Account deactivated; pick another. Account lists are refetched |
+| `payment_account_not_available` | 409 | Account not offered by the event; set the event accounts first. Lists refetched |
+| `contribution_already_paid` | 409 | Recording on a paid contribution (another session paid first); rows and summary refetched |
+| `contribution_not_paid` | 409 | Cancelling a pending contribution; rows and summary refetched |
+| `paid_contribution_amount_locked` | 409 | Changing `amount` while paid (the edit dialog disables the field) |
+| `contribution_has_payments` | 409 | Participant is paid or ever had a payment cancelled; cannot be removed |
+| `payment_status_not_editable` | 422 | Mapped only; the app never sends `payment_status` |
+| `duplicate_payment_account` | 422 | Repeated account id in the event set (the picker cannot produce it) |
 
 To support a new code, add it to `MESSAGES_BY_CODE` in `errors.ts` and cover it with a test.
 

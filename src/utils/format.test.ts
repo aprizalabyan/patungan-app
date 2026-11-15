@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmountInput, formatDate, formatDateTime, formatRupiah, parseRupiahInput } from './format'
+import {
+  formatAmountInput,
+  formatDate,
+  formatDateTime,
+  formatRupiah,
+  parseRupiahInput,
+  toWibInputValue,
+  wibInputToIso,
+} from './format'
 
 describe('formatRupiah', () => {
   it('formats whole Rupiah with dot separators and no space', () => {
@@ -44,5 +52,24 @@ describe('amount input helpers', () => {
   it('adds thousand separators while typing', () => {
     expect(formatAmountInput('200000')).toBe('200.000')
     expect(formatAmountInput('')).toBe('')
+  })
+})
+
+describe('WIB datetime-local helpers', () => {
+  it('shows an instant in WIB for the input', () => {
+    expect(toWibInputValue('2026-11-15T07:00:00Z')).toBe('2026-11-15T14:00')
+    expect(toWibInputValue('2026-11-15T18:30:00Z')).toBe('2026-11-16T01:30')
+    expect(toWibInputValue('nonsense')).toBe('')
+  })
+
+  it('turns an input value into a timezone-aware ISO string', () => {
+    expect(wibInputToIso('2026-11-15T14:00')).toBe('2026-11-15T14:00:00+07:00')
+    expect(wibInputToIso('')).toBeNull()
+    expect(wibInputToIso('2026-13-45T99:00')).toBeNull()
+  })
+
+  it('round-trips', () => {
+    const iso = wibInputToIso('2026-11-15T14:00')!
+    expect(toWibInputValue(iso)).toBe('2026-11-15T14:00')
   })
 })

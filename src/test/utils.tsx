@@ -6,7 +6,14 @@ import { AppProviders } from '@/AppProviders'
 import { AppRoutes } from '@/AppRoutes'
 import { API_BASE_URL } from '@/services/config'
 import { session } from '@/services/session'
-import type { Contribution, Event, EventSummary, Friend, User } from '@/types/api'
+import type {
+  Contribution,
+  Event,
+  EventSummary,
+  Friend,
+  PaymentAccount,
+  User,
+} from '@/types/api'
 
 export interface RecordedCall {
   method: string
@@ -124,6 +131,13 @@ export function makeSummary(overrides: Partial<EventSummary> = {}): EventSummary
     total_pending: 150_000,
     target_amount: 2_000_000,
     progress_percent: 10,
+    total_contributions: 350_000,
+    total_received: 200_000,
+    payment_accounts: [
+      { id: 'a-1', provider_name: 'BRI', type: 'bank', total_received: 150_000 },
+      { id: 'a-2', provider_name: 'DANA', type: 'e_wallet', total_received: 50_000 },
+    ],
+    unassigned_total: 0,
     ...overrides,
   }
 }
@@ -148,7 +162,24 @@ export function makeContribution(overrides: Partial<Contribution> = {}): Contrib
     amount: 150_000,
     payment_status: 'pending',
     paid_at: null,
+    payment_account: null,
+    payment_notes: null,
     notes: null,
+    created_at: '2026-10-01T00:00:00Z',
+    updated_at: '2026-10-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
+export function makePaymentAccount(overrides: Partial<PaymentAccount> = {}): PaymentAccount {
+  return {
+    id: 'a-1',
+    type: 'bank',
+    provider_name: 'BRI',
+    account_name: 'Aprizal',
+    account_number: '0012345678',
+    label: null,
+    is_active: true,
     created_at: '2026-10-01T00:00:00Z',
     updated_at: '2026-10-01T00:00:00Z',
     ...overrides,

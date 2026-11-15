@@ -15,12 +15,10 @@ export function buildWhatsAppSummary(
   if (event.event_date) lines.push(`Tanggal: ${formatDate(event.event_date)}`)
   lines.push('')
   if (summary.target_amount) lines.push(`Target: ${formatRupiah(summary.target_amount)}`)
-  lines.push(`Terkumpul: ${formatRupiah(summary.total_collected)}`)
+  lines.push(`Terkumpul: ${formatRupiah(summary.total_received)}`)
   if (summary.progress_percent !== null) lines.push(`Progres: ${summary.progress_percent}%`)
   lines.push(`Belum masuk: ${formatRupiah(summary.total_pending)}`)
-  lines.push(
-    `Peserta: ${summary.total_participants} (${summary.paid_count} lunas, ${summary.pending_count} belum bayar)`,
-  )
+  lines.push(`Peserta: ${summary.total_participants} (${summary.paid_count} lunas, ${summary.pending_count} belum bayar)`)
 
   const paid = contributions.filter((c) => c.payment_status === 'paid')
   const pending = contributions.filter((c) => c.payment_status === 'pending')

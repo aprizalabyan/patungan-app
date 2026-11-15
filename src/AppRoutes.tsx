@@ -8,6 +8,7 @@ import { EventsPage } from '@/pages/EventsPage'
 import { FriendsPage } from '@/pages/FriendsPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { PaymentAccountsPage } from '@/pages/PaymentAccountsPage'
 import { PublicEventPage } from '@/pages/PublicEventPage'
 import { PublicEventsPage } from '@/pages/PublicEventsPage'
 
@@ -28,6 +29,7 @@ export function AppRoutes() {
           <Route path="events" element={<EventsPage />} />
           <Route path="events/:eventId" element={<EventDetailPage />} />
           <Route path="friends" element={<FriendsPage />} />
+          <Route path="payment-accounts" element={<PaymentAccountsPage />} />
         </Route>
       </Route>
 

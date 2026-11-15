@@ -2,6 +2,7 @@ import type {
   ContributionListParams,
   EventListParams,
   FriendListParams,
+  PaymentAccountListParams,
   PublicEventListParams,
 } from '@/types/api'
 
@@ -22,9 +23,16 @@ export const queryKeys = {
     detail: (id: string) => ['events', 'detail', id] as const,
     summaries: ['events', 'summary'] as const,
     summary: (id: string) => ['events', 'summary', id] as const,
+    paymentAccountsAll: ['events', 'payment-accounts'] as const,
+    paymentAccounts: (id: string) => ['events', 'payment-accounts', id] as const,
     contributions: (id: string) => ['events', 'contributions', id] as const,
     contributionList: (id: string, params: ContributionListParams) =>
       ['events', 'contributions', id, params] as const,
+  },
+
+  paymentAccounts: {
+    all: ['payment-accounts'] as const,
+    list: (params: PaymentAccountListParams) => ['payment-accounts', 'list', params] as const,
   },
 
   public: {

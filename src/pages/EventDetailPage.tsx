@@ -23,6 +23,8 @@ import {
   useUpdateContribution,
   useUpdateEvent,
 } from '@/features/events/useEvents'
+import { ContributionPaymentDialog } from '@/features/payments/ContributionPaymentDialog'
+import { EventPaymentAccounts } from '@/features/payments/EventPaymentAccounts'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { getErrorMessage, isNotFound } from '@/services/errors'
 import type { Contribution, PaymentStatus } from '@/types/api'
@@ -59,31 +61,15 @@ export function EventDetailPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<Contribution | null>(null)
   const [removing, setRemoving] = useState<Contribution | null>(null)
-  const [unpaying, setUnpaying] = useState<Contribution | null>(null)
+  const [payingId, setPayingId] = useState<string | null>(null)
   const [confirmDeleteEvent, setConfirmDeleteEvent] = useState(false)
   const [filter, setFilter] = useState<Filter>('all')
 
   const allContributions = useMemo(() => contributions.data?.items ?? [], [contributions.data])
   const existingFriendIds = useMemo(() => new Set(allContributions.map((c) => c.friend_id)), [allContributions])
   const visible = filter === 'all' ? allContributions : allContributions.filter((c) => c.payment_status === filter)
-  const statusPendingId = updateContribution.isPending ? (updateContribution.variables?.id ?? null) : null
-
-  async function setStatus(c: Contribution, next: PaymentStatus) {
-    try {
-      await updateContribution.mutateAsync({ id: c.id, body: { payment_status: next } })
-      toast.success(
-        next === 'paid' ? `${c.friend.name} ditandai lunas.` : `${c.friend.name} ditandai belum bayar.`,
-      )
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Gagal memperbarui status pembayaran.'))
-    }
-  }
-
-  function handleToggle(c: Contribution, next: PaymentStatus) {
-    // Reverting a payment clears paid_at on the backend, so ask first.
-    if (next === 'pending') setUnpaying(c)
-    else void setStatus(c, next)
-  }
+  // Always the live row, so the dialog follows the status after every payment change.
+  const paying = allContributions.find((c) => c.id === payingId) ?? null
 
   if (event.isPending) return <LoadingState />
   if (event.isError) {
@@ -198,10 +184,12 @@ export function EventDetailPage() {
           <EventSummaryPanel summary={summary.data} />
         )}
 
+        <EventPaymentAccounts eventId={eventId} />
+
         <Card>
           <CardHeader
             title="Peserta"
-            description="Iuran baru selalu berstatus belum bayar."
+            description="Setiap peserta punya satu iuran dan satu pembayaran. Status menjadi lunas setelah pembayaran dicatat."
             actions={<Button onClick={() => setAddOpen(true)}>Tambah peserta</Button>}
           />
           {contributions.isPending ? (
@@ -237,8 +225,7 @@ export function EventDetailPage() {
               ) : (
                 <ContributionsTable
                   contributions={visible}
-                  pendingId={statusPendingId}
-                  onToggleStatus={handleToggle}
+                  onPayments={(c) => setPayingId(c.id)}
                   onEdit={setEditing}
                   onDelete={setRemoving}
                 />
@@ -280,27 +267,7 @@ export function EventDetailPage() {
         }}
       />
 
-      <ConfirmDialog
-        open={unpaying !== null}
-        title="Batalkan status lunas?"
-        message={
-          unpaying && (
-            <>
-              Status <strong>{unpaying.friend.name}</strong> akan kembali menjadi belum bayar dan waktu pembayaran akan
-              dihapus.
-            </>
-          )
-        }
-        confirmLabel="Ya, batalkan lunas"
-        tone="primary"
-        loading={updateContribution.isPending}
-        onCancel={() => setUnpaying(null)}
-        onConfirm={async () => {
-          if (!unpaying) return
-          await setStatus(unpaying, 'pending')
-          setUnpaying(null)
-        }}
-      />
+      <ContributionPaymentDialog contribution={paying} eventId={eventId} onClose={() => setPayingId(null)} />
 
       <ConfirmDialog
         open={removing !== null}
@@ -309,7 +276,8 @@ export function EventDetailPage() {
           removing && (
             <>
               Iuran <strong>{removing.friend.name}</strong> ({formatRupiah(removing.amount)}) akan dihapus dari acara
-              ini. Data teman di daftar teman tidak terhapus.
+              ini. Data teman di daftar teman tidak terhapus. Peserta yang sudah membayar atau pernah memiliki pembayaran
+              yang dibatalkan tidak dapat dihapus.
             </>
           )
         }
@@ -336,7 +304,7 @@ export function EventDetailPage() {
         title="Hapus acara ini?"
         message={
           <>
-            Acara <strong>{e.title}</strong> beserta <strong>seluruh data iurannya</strong> akan dihapus permanen. Tindakan
+            Acara <strong>{e.title}</strong> beserta <strong>seluruh data iuran dan pembayarannya</strong> akan dihapus permanen. Tindakan
             ini tidak dapat dibatalkan.
           </>
         }

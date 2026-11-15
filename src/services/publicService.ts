@@ -1,9 +1,9 @@
 import type {
-  EventSummary,
   Page,
   PublicEvent,
   PublicEventDetail,
   PublicEventListParams,
+  PublicEventSummary,
 } from '@/types/api'
 import { apiRequest } from './apiClient'
 
@@ -16,5 +16,5 @@ export const publicService = {
     apiRequest<PublicEventDetail>(`/public/events/${eventId}`, { auth: false, signal }),
 
   getSummary: (eventId: string, signal?: AbortSignal) =>
-    apiRequest<EventSummary>(`/public/events/${eventId}/summary`, { auth: false, signal }),
+    apiRequest<PublicEventSummary>(`/public/events/${eventId}/summary`, { auth: false, signal }),
 }

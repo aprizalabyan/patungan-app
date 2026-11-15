@@ -36,6 +36,7 @@ src/
     auth/                AuthProvider, authContext/useAuth, ProtectedRoute
     events/              useEvents.ts (queries/mutations), dialogs, summary panel, contributions table
     friends/             useFriends.ts, FriendFormDialog
+    payments/            usePayments.ts, account form, event account picker, contribution payment dialog (record / show / cancel)
     public/              usePublicEvents.ts
   services/              apiClient, config, session, errors, constants, queryKeys, *Service.ts
   hooks/                 useDebouncedValue, useCopyToClipboard, usePageParam/useSearchParamState
@@ -61,7 +62,7 @@ pages  →  features (hooks + feature components)  →  services  →  apiClient
 
 - `/login` → `LoginPage`
 - `/public` (`PublicLayout`): index → `PublicEventsPage`; `events/:eventId` → `PublicEventPage`. **Not** behind auth.
-- `ProtectedRoute` > `AppLayout`: `/` → `DashboardPage`, `events`, `events/:eventId`, `friends`.
+- `ProtectedRoute` > `AppLayout`: `/` → `DashboardPage`, `events`, `events/:eventId`, `friends`, `payment-accounts`.
 - `*` → `NotFoundPage`.
 
 Build links with literal English paths; use `publicEventPath(id)` / `publicEventUrl(id)` from `utils/publicUrl.ts`
@@ -100,6 +101,8 @@ Query keys are centralized in `services/queryKeys.ts` and are hierarchical so a 
 | `['events', 'detail', id]` | one event |
 | `['events', 'summary', id]` | backend summary for one event (shared by detail, list rows, dashboard) |
 | `['events', 'contributions', id, params]` | participants of an event |
+| `['events', 'payment-accounts', id]` | accounts offered by an event (`events.paymentAccountsAll` = prefix) |
+| `['payment-accounts', 'list', params]` | all global payment accounts |
 | `['public', 'events', params]`, `['public','event', id]`, `['public','summary', id]` | public data |
 
 Hooks (all in `features/*/use*.ts`) wrap `services/*`. Components must use these hooks.
@@ -110,9 +113,13 @@ Hooks (all in `features/*/use*.ts`) wrap `services/*`. Components must use these
 |---|---|
 | Create event | seed `detail`; invalidate event lists and `everything` |
 | Update event | set `detail`; invalidate lists, `everything` and `summary(id)` (target drives progress) |
-| Delete event | remove `detail`, `summary`, `contributions` for the id; invalidate lists and `everything` |
+| Delete event | remove `detail`, `summary`, `contributions`, `paymentAccounts` for the id; invalidate lists and `everything` |
 | Add / delete contribution | invalidate `contributions(eventId)` **and** `summary(eventId)` |
 | Update contribution | write the returned row into cached contribution lists (shows `paid_at` immediately), then invalidate both as above |
+| Create payment account | invalidate `['payment-accounts']` |
+| Update / (de)activate payment account | invalidate `['payment-accounts']`, every event's account list and all event summaries (breakdown shows the current identity) |
+| Replace event accounts (PUT) | set `events.paymentAccounts(id)` from the response; invalidate `summary(id)` |
+| Record / cancel the payment | write the returned contribution into the cached rows (`applyContributionRow`), then invalidate `contributions(eventId)` + `summary(eventId)` (via `invalidateContributionData`); on a 409 refetch the same, and on `payment_account_*` also the account lists |
 | Create / delete friend | invalidate `['friends']` |
 | Update friend | invalidate `['friends']` and `['events','contributions']` (embedded names) |
 
@@ -129,7 +136,7 @@ aggregate loading/error state.
 
 `Button` (+ `buttonClasses` for links), `Card`/`CardHeader`/`StatCard`, `Badge` (`PaymentStatusBadge`,
 `EventStatusBadge`, `VisibilityBadge`), `TextField`/`TextAreaField`/`SelectField`/`CheckboxField`, `AmountField`,
-`Dialog` + `ConfirmDialog`, `Toast` (`ToastProvider`, `useToast`), `DataTable`, `Pagination`, `ProgressBar`,
+`Dialog` + `ConfirmDialog` (its `message` may hold a form field, used for the optional cancel reason), `Toast` (`ToastProvider`, `useToast`), `DataTable`, `Pagination`, `ProgressBar`,
 `Spinner`/`LoadingState`, `EmptyState`/`ErrorState`/`InlineError`, `PageHeader`. Prefer these over ad-hoc markup;
 extend them rather than duplicating.
 

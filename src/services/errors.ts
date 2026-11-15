@@ -42,6 +42,19 @@ const MESSAGES_BY_CODE: Record<string, string> = {
   friend_in_use:
     'Teman ini tidak dapat dihapus karena memiliki riwayat iuran di salah satu acara.',
   validation_error: 'Data yang dikirim tidak valid. Periksa kembali isian Anda.',
+  payment_account_inactive:
+    'Rekening ini sudah nonaktif sehingga tidak dapat dipakai untuk transaksi baru. Pilih rekening aktif lain.',
+  payment_account_not_available:
+    'Rekening ini tidak tersedia untuk acara ini. Atur rekening acara terlebih dahulu.',
+  contribution_already_paid: 'Iuran ini sudah tercatat lunas. Muat ulang untuk melihat pembayarannya.',
+  contribution_not_paid: 'Iuran ini belum memiliki pembayaran yang bisa dibatalkan.',
+  paid_contribution_amount_locked:
+    'Nominal iuran tidak dapat diubah selama sudah dibayar. Batalkan pembayaran terlebih dahulu.',
+  contribution_has_payments:
+    'Peserta ini sudah membayar atau pernah memiliki pembayaran yang dibatalkan, sehingga tidak dapat dihapus demi menjaga riwayat keuangan.',
+  payment_status_not_editable:
+    'Status dicatat otomatis oleh pembayaran. Catat atau batalkan pembayaran untuk mengubahnya.',
+  duplicate_payment_account: 'Ada rekening yang terpilih lebih dari satu kali. Periksa kembali pilihan Anda.',
 }
 
 /** User-facing Indonesian message for any error thrown by the API layer. */

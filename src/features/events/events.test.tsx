@@ -86,6 +86,7 @@ function detailRoutes(contributions = [makeContribution()]) {
     'GET /events/e-1': { body: makeEvent() },
     'GET /events/e-1/summary': { body: makeSummary() },
     'GET /events/e-1/contributions': { body: page(contributions, contributions.length, 1, 100) },
+    'GET /events/e-1/payment-accounts': { body: [] },
   }
 }
 
@@ -164,7 +165,7 @@ describe('event detail', () => {
 
     const summaryCallsBefore = calls.filter((c) => c.path === '/events/e-1/summary').length
     routes['GET /events/e-1/contributions'] = { body: page([makeContribution(), added], 2, 1, 100) }
-    routes['GET /events/e-1/summary'] = { body: makeSummary({ total_participants: 3, total_pending: 350_000 }) }
+    routes['GET /events/e-1/summary'] = { body: makeSummary({ total_participants: 3, total_contributions: 550_000, total_pending: 350_000 }) }
     await userEvent.click(within(dialog).getByRole('button', { name: 'Tambah peserta' }))
 
     expect(await screen.findByText('Citra Lestari')).toBeInTheDocument()
@@ -186,45 +187,6 @@ describe('event detail', () => {
     await userEvent.type(within(dialog).getByLabelText(/Nominal iuran/), '100000')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Tambah peserta' }))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Teman ini sudah terdaftar di acara ini.')
-  })
-
-  it('marks a contribution as paid and invalidates contributions and summary', async () => {
-    const paid = makeContribution({ payment_status: 'paid', paid_at: '2026-10-30T05:00:00Z' })
-    const { calls, routes } = mockApi({
-      ...detailRoutes(),
-      'PATCH /contributions/c-1': { body: paid },
-    })
-    renderApp('/events/e-1', { loggedIn: true })
-    await screen.findByText('Budi Santoso')
-    const countOf = (path: string) => calls.filter((c) => c.method === 'GET' && c.path === path).length
-    const before = { summary: countOf('/events/e-1/summary'), list: countOf('/events/e-1/contributions') }
-
-    routes['GET /events/e-1/contributions'] = { body: page([paid], 1, 1, 100) }
-    routes['GET /events/e-1/summary'] = { body: makeSummary({ paid_count: 2, pending_count: 0, total_collected: 350_000, total_pending: 0 }) }
-    await userEvent.click(screen.getByRole('button', { name: 'Tandai lunas: Budi Santoso' }))
-
-    expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ payment_status: 'paid' })
-    expect(await screen.findByText('30 Okt 2026, 12.00 WIB')).toBeInTheDocument()
-    expect(await screen.findByText('Rp350.000')).toBeInTheDocument()
-    expect(countOf('/events/e-1/summary')).toBeGreaterThan(before.summary)
-    expect(countOf('/events/e-1/contributions')).toBeGreaterThan(before.list)
-  })
-
-  it('asks for confirmation before reverting a paid contribution', async () => {
-    const paid = makeContribution({ payment_status: 'paid', paid_at: '2026-10-30T05:00:00Z' })
-    const { calls } = mockApi({
-      ...detailRoutes([paid]),
-      'PATCH /contributions/c-1': { body: makeContribution() },
-    })
-    renderApp('/events/e-1', { loggedIn: true })
-    await userEvent.click(await screen.findByRole('button', { name: 'Tandai belum bayar: Budi Santoso' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Batalkan status lunas?' })
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Batal' }))
-    expect(calls.some((c) => c.method === 'PATCH')).toBe(false)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Tandai belum bayar: Budi Santoso' }))
-    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Ya, batalkan lunas' }))
-    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ payment_status: 'pending' }))
   })
 
   it('removes a contribution only after confirmation', async () => {
@@ -259,5 +221,65 @@ describe('event detail', () => {
     await waitFor(() =>
       expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ amount: 175_000, notes: 'transfer BCA' }),
     )
+  })
+
+  it('sends only the changed field and never payment_status when editing a contribution', async () => {
+    const { calls } = mockApi({
+      ...detailRoutes(),
+      'PATCH /contributions/c-1': { body: makeContribution({ notes: 'catatan baru' }) },
+    })
+    renderApp('/events/e-1', { loggedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Ubah iuran Budi Santoso' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Ubah iuran' })
+    await userEvent.type(within(dialog).getByLabelText(/Catatan/), 'catatan baru')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ notes: 'catatan baru' }))
+  })
+
+  it('filters participants by pending and paid only', async () => {
+    mockApi(
+      detailRoutes([
+        makeContribution({ payment_status: 'paid', paid_at: '2026-11-15T07:00:00Z' }),
+        makeContribution({ id: 'c-2', friend_id: 'f-2', friend: { id: 'f-2', name: 'Citra', nickname: null } }),
+      ]),
+    )
+    renderApp('/events/e-1', { loggedIn: true })
+    await screen.findByText('Budi Santoso')
+    const filters = screen.getByRole('group', { name: 'Saring status pembayaran' })
+    expect(within(filters).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Semua',
+      'Belum bayar',
+      'Lunas',
+    ])
+    expect(screen.queryByText('Sebagian')).not.toBeInTheDocument()
+    await userEvent.click(within(filters).getByRole('button', { name: 'Lunas' }))
+    expect(screen.queryByText('Citra')).not.toBeInTheDocument()
+    expect(screen.getByText('Budi Santoso')).toBeInTheDocument()
+  })
+
+  it('locks the amount of a paid contribution and sends only the notes', async () => {
+    const { calls } = mockApi({
+      ...detailRoutes([makeContribution({ payment_status: 'paid', paid_at: '2026-11-15T07:00:00Z' })]),
+      'PATCH /contributions/c-1': { body: makeContribution({ notes: 'catatan' }) },
+    })
+    renderApp('/events/e-1', { loggedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Ubah iuran Budi Santoso' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Ubah iuran' })
+    expect(within(dialog).getByLabelText(/Nominal iuran/)).toBeDisabled()
+    await userEvent.type(within(dialog).getByLabelText(/Catatan/), 'catatan')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ notes: 'catatan' }))
+  })
+
+  it('explains that a contribution with payments cannot be deleted', async () => {
+    mockApi({
+      ...detailRoutes(),
+      'DELETE /contributions/c-1': apiError(409, 'contribution_has_payments'),
+    })
+    renderApp('/events/e-1', { loggedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Hapus Budi Santoso dari acara' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Hapus peserta?' })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Hapus peserta' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('pembayaran yang dibatalkan')
   })
 })

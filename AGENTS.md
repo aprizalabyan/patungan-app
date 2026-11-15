@@ -59,7 +59,7 @@ Run `npm run typecheck`, `npm test` and `npm run build` before declaring work fi
 ## Conventions in one glance
 
 - Import alias: `@/` maps to `src/`.
-- Routes (English): `/login`, `/`, `/events`, `/events/:eventId`, `/friends`, `/public`, `/public/events/:eventId`.
+- Routes (English): `/login`, `/`, `/events`, `/events/:eventId`, `/friends`, `/payment-accounts`, `/public`, `/public/events/:eventId`.
 - Server state: TanStack Query only. Query keys come from `src/services/queryKeys.ts`. After a mutation, invalidate
   every query derived from the changed data (see the invalidation table in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 - Styling: Tailwind CSS v4 utility classes, neutral (stone) backgrounds, green accents. Reuse `src/components/ui/*`.
@@ -74,6 +74,11 @@ Run `npm run typecheck`, `npm test` and `npm run build` before declaring work fi
     logout or credentialed cookies. The frontend implementation follows `docs/AUTHENTICATION.md` assumptions and has
     only been tested with mocked responses.
 - The frontend test suite uses mocked responses and has not been exercised against a live backend.
+- **Payment accounts and contribution payments follow the backend docs in `BE/docs/`** and have only been tested with
+  mocked responses. The model is **one payment per contribution** (`PATCH /contributions/{id}/payment`, `POST .../payment/cancel`); the
+  earlier multi-payment UI is gone. Assumptions not stated there: saving an event's account set with an empty list is
+  allowed; the cancel and payment notes limits (2000) come from the BE schema docs; payment times are entered and shown in WIB and
+  sent with a `+07:00` offset; an omitted `notes` (not `null`) is sent when the notes field is empty.
 - **Not verified end-to-end.** The app has only been tested against mocked responses, not a running backend.
 
 When you fix or discover an issue, update this list.

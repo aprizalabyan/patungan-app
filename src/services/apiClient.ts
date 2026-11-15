@@ -5,7 +5,7 @@ import { session } from './session'
 type QueryValue = string | number | boolean | null | undefined
 export type QueryParams = Record<string, QueryValue>
 export interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   query?: QueryParams
   auth?: boolean

@@ -34,7 +34,7 @@ export function DashboardPage() {
       const s = summaries.byId.get(e.id)
       if (!s) return null
       if (e.status === 'active') participants += s.total_participants
-      collected += s.total_collected
+      collected += s.total_received
       pending += s.total_pending
     }
     return { activeCount: active.length, participants, collected, pending }
@@ -79,13 +79,13 @@ export function DashboardPage() {
                   label="Total terkumpul"
                   value={totals ? formatRupiah(totals.collected) : '…'}
                   tone="green"
-                  hint="Semua acara, hanya yang sudah lunas"
+                  hint="Semua acara, iuran yang sudah lunas"
                 />
                 <StatCard
                   label="Total belum masuk"
                   value={totals ? formatRupiah(totals.pending) : '…'}
                   tone="amber"
-                  hint="Semua acara"
+                  hint="Semua acara, iuran yang belum dibayar"
                 />
               </>
             )}
@@ -126,7 +126,7 @@ export function DashboardPage() {
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-sm text-stone-600 tabular-nums">
-                            {s ? formatRupiah(s.total_collected) : '…'}
+                            {s ? formatRupiah(s.total_received) : '…'}
                           </span>
                           <EventStatusBadge status={e.status} />
                         </div>

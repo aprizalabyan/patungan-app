@@ -17,14 +17,17 @@ described only as far as the frontend code, types and tests reveal it.
 - **The backend is authoritative** for `total_collected`, `total_pending`, `paid_count`, `pending_count`,
   `total_participants`, `progress_percent`, `payment_status` and `paid_at`. The frontend formats them and must not
   compute, adjust or persist its own balances. Do not sum `contributions[].amount` to display a total.
-- `total_collected` counts **paid** contributions only; `total_pending` is the pending amount (see the comment on
-  `EventSummary` in `src/types/api.ts`).
+- `total_received` (legacy alias `total_collected`) is the sum of the bills of **paid** contributions; `total_pending`
+  is the sum of the bills of pending ones, and `total_contributions` is both together. The management UI shows
+  `total_received` / `total_pending`; the public page only has the legacy names (see `EventSummary` in `src/types/api.ts`).
+- There is **no client-side arithmetic on money at all**: a payment always equals the bill, so there is no remaining or
+  overpaid amount to compute, and none is shown.
 - The dashboard has no backend aggregate endpoint, so it adds up per-event backend summaries
   (`DashboardPage`). It shows figures only after **every** summary has loaded, never from a partial set. Behaviour as
   implemented:
   - "Acara aktif" = number of events with status `active`.
   - "Peserta (acara aktif)" = sum of `total_participants` over **active** events only.
-  - "Total terkumpul" and "Total belum masuk" = sums over **all** events.
+  - "Total terkumpul" (`total_received`) and "Total belum masuk" (`total_pending`) = sums over **all** events.
 
 ## 3. Friends
 
@@ -54,12 +57,44 @@ described only as far as the frontend code, types and tests reveal it.
   `duplicate_contribution` (409) response is shown as "Teman ini sudah terdaftar di acara ini."
 - **New contributions default to pending.** The create request (`ContributionCreate`) has no status field; the UI
   states the initial status is "belum bayar".
-- Payment status changes only through `PATCH` with `payment_status`. `paid_at` is set/cleared by the backend; the UI
-  never sends it. It displays `paid_at` only when the row is `paid` and `paid_at` is non-null.
-- Reverting `paid` → `pending` asks for confirmation first, because the paid time is removed.
-- Editing amount or notes sends only those fields and does not touch the status.
-- Removing a contribution requires confirmation; the friend master record is kept.
+- **Status is `pending` or `paid` and is owned by the backend.** There is no partial status, instalment or overpayment.
+  The UI never sends `payment_status` (a different value is `422 payment_status_not_editable`) and never computes it.
+  `paid_at` is set by the backend; the UI shows it only when the row is `paid` and `paid_at` is non-null.
+- Editing sends **only the changed fields**. The **amount is locked while paid** (`409 paid_contribution_amount_locked`):
+  the edit dialog disables the field and sends only notes; cancel the payment first to change the bill.
+- Removing a contribution requires confirmation; the friend master record is kept. A paid contribution, or one whose
+  payment was ever cancelled, cannot be removed (`409 contribution_has_payments`); the dialog explains it. Deleting an
+  **event** also deletes its contributions and payments and says so.
 - Notes are visible to the treasurer only.
+
+## 4a. Payment accounts and payments
+
+- **Accounts** are global to the treasurer (`/payment-accounts`): `type` (`bank` | `e_wallet` | `cash`), free-text
+  `provider_name` (never an enum; the form only suggests providers already in use), owner name, number (always a
+  string, leading zeros kept) and optional label. **Cash** ("Tunai") has no provider field and no number in the form:
+  only the holder ("Nama pemegang kas") is required, and the request carries neither provider nor number (backend fixes
+  the provider to `Cash`; `account_number` is `null`). Switching an account from cash to bank/e-wallet requires provider
+  and number again. Each type has its own badge colour (bank blue, e-wallet green, cash amber); cash shows "Dipegang oleh
+  {holder}" instead of a number everywhere (list, event accounts, paid details). They can be edited and (de)activated, never deleted. Deactivating asks
+  for confirmation; it only blocks **new** payments, history is untouched.
+- **Event accounts**: the event page lists the accounts offered for the event and lets the treasurer replace the set
+  (`PUT`). Only active accounts can be selected; inactive ones are shown disabled and the payload is filtered to active
+  ids (the dialog warns that inactive linked accounts are released). Releasing an account never deletes payments. The
+  API only lists *available* links, so a released account with history is visible through payment snapshots and the
+  summary breakdown rather than the event account list.
+- **One payment per contribution.** The payment amount is always the contribution's bill: the app never asks for or
+  sends an amount (the record body is `{payment_account_id, paid_at?, notes?}`); the form shows the bill read-only.
+  A pending contribution can be recorded once, to an active account currently offered by the event, with a time (WIB
+  input, sent as `+07:00`) and optional notes. Afterwards the contribution is `paid` and the record action is gone;
+  a second payment cannot be created (`409 contribution_already_paid` refetches the row if another session was first).
+- **The paid contribution shows the account snapshot** copied when it was paid, never the current master record, so
+  renaming, deactivating or releasing the account later changes nothing. Legacy paid data without an account
+  (`payment_account: null`) shows "Rekening tidak tercatat"; it is not an error. The summary breakdown instead uses the
+  account's **current** identity plus a "Rekening tidak tercatat" row for `unassigned_total`.
+- **Cancel** (the only way to undo a payment): confirmation dialog with an optional reason. The contribution returns to
+  `pending` and its payment info disappears; rows and summary are refreshed. Cancelling works even if the account has
+  since been deactivated. The backend keeps the cancelled payment as history; the app has no UI for it. There is no
+  edit of a recorded payment (cancel and record again) and no hard delete anywhere.
 
 ## 5. Public pages and privacy
 
@@ -93,11 +128,17 @@ The frontend validates before sending to give fast feedback. **The backend is au
 | Friend phone | optional, 3–30 chars, digits/space/`-`/`()` with optional leading `+` | `isValidPhone` |
 | Contribution amount | required integer, > 0, ≤ 1,000,000,000,000 | `validateAmount` |
 | Contribution notes | optional, ≤ 500 chars | add/edit contribution dialogs |
+| Account provider / owner / number / label | required (label optional), ≤ 100 / 150 / 100 / 100 chars | `PaymentAccountFormDialog` |
+| Payment account | required (active, available for the event) | `ContributionPaymentDialog` |
+| Payment amount | none: always the bill, read-only | `ContributionPaymentDialog` |
+| Payment time | required valid `datetime-local`, interpreted as WIB | `wibInputToIso` |
+| Payment notes | optional, ≤ 2000 chars | `ContributionPaymentDialog` |
+| Cancel reason | optional, ≤ 2000 chars | `ContributionPaymentDialog` |
 | Friend (add participant) | one must be selected | `AddContributionDialog` |
 
 Optional text fields: blank input becomes `null` (`emptyToNull`) so the value is cleared rather than stored as an
 empty string. PATCH bodies may omit fields; per the type comments, `name`/`title`/`status`/`is_public`/`amount`/
-`payment_status` must not be sent as `null`.
+`payment_status` must not be sent as `null`; the app does not send `payment_status` at all, nor `amount` for a paid contribution.
 
 ## 7. Formatting (Indonesian locale)
 
@@ -115,8 +156,8 @@ Labels for statuses are in `src/utils/labels.ts`. Don't hard-code them in compon
 ## 8. WhatsApp summary
 
 `buildWhatsAppSummary` (`src/utils/whatsapp.ts`) builds the copied text from the backend **summary** (title, date,
-target, collected, progress, pending, participant counts) plus the participant list grouped into paid and pending.
-Pending entries include the person's amount; paid entries show only the name. The public link is appended only for
+target, received, progress, still owed, paid/pending counts) plus the participant list grouped into paid and
+pending. Pending entries include the person's amount; paid entries show only the name. The public link is appended only for
 public events. The list is only listed, never summed.
 
 ## 9. Session

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import type { EventStatus, PaymentStatus } from '@/types/api'
+import type { EventStatus, PaymentAccountType, PaymentStatus } from '@/types/api'
 import { cn } from '@/utils/cn'
-import { eventStatusLabel, paymentStatusLabel, visibilityLabel } from '@/utils/labels'
+import { eventStatusLabel, paymentAccountTypeLabel, paymentStatusLabel, visibilityLabel } from '@/utils/labels'
 
 export type BadgeTone = 'green' | 'amber' | 'stone' | 'blue'
 
@@ -26,7 +26,15 @@ export function Badge({ tone = 'stone', children }: { tone?: BadgeTone; children
 }
 
 export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
-  return <Badge tone={status === 'paid' ? 'green' : 'amber'}>{paymentStatusLabel[status]}</Badge>
+  const tone: BadgeTone = status === 'paid' ? 'green' : 'amber'
+  return <Badge tone={tone}>{paymentStatusLabel[status]}</Badge>
+}
+
+const accountTypeTones: Record<PaymentAccountType, BadgeTone> = { bank: 'blue', e_wallet: 'green', cash: 'amber' }
+
+/** Bank, e-wallet and cash each get their own colour so they are told apart at a glance. */
+export function PaymentAccountTypeBadge({ type }: { type: PaymentAccountType }) {
+  return <Badge tone={accountTypeTones[type]}>{paymentAccountTypeLabel[type]}</Badge>
 }
 
 export function EventStatusBadge({ status }: { status: EventStatus }) {
