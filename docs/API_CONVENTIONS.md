@@ -9,7 +9,7 @@ backend owner, and then update `src/types/api.ts` and this file. **Do not guess 
 
 - Base URL: `API_BASE_URL` in `src/services/config.ts` = `VITE_API_BASE_URL` (trimmed, trailing slashes removed). It
   must include the API prefix (e.g. `https://host/api/v1`).
-- If the variable is unset, the code uses `/api/v1`. Vite proxies this path to `API_PROXY_TARGET` (default
+- If the variable is unset, the code uses `/api/v1`. Vite proxies this path to `VITE_API_PROXY_TARGET` (default
   `http://localhost:8001`) in development. On Vercel, `vercel.json` routes it to `api/proxy.ts`, which forwards it
   to the server-only `BACKEND_API_URL`; this variable must include `/api/v1`. Do not put the backend URL in a `VITE_*` variable when using this
   proxy; Vite exposes those values in the browser bundle. The backend origin is not exposed to browser requests, but

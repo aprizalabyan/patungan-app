@@ -28,7 +28,7 @@ cp .env.example .env      # adjust VITE_API_BASE_URL if needed
 npm run dev               # http://localhost:5173
 ```
 
-Start the backend separately (see its README). Vite proxies `/api/v1` to `API_PROXY_TARGET` (default
+Start the backend separately (see its README). Vite proxies `/api/v1` to `VITE_API_PROXY_TARGET` (default
 `http://localhost:8001`). The treasurer account is created on the backend with `python -m app.cli create-treasurer`.
 
 ## Environment
@@ -36,7 +36,7 @@ Start the backend separately (see its README). Vite proxies `/api/v1` to `API_PR
 | Variable | Default | Meaning |
 |---|---|---|
 | `VITE_API_BASE_URL` | `/api/v1` | Same-origin API path; leave this as `/api/v1` to use the proxy |
-| `API_PROXY_TARGET` | `http://localhost:8001` | Local Vite proxy target (backend origin) |
+| `VITE_API_PROXY_TARGET` | `http://localhost:8001` | Local Vite proxy target (backend origin) |
 | `BACKEND_API_URL` | — | Vercel server-only variable: backend API base URL including `/api/v1` |
 
 `VITE_*` variables are inlined at build time, so set it before `npm run build`. Never put secrets in them.
