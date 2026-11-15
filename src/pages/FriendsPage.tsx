@@ -122,7 +122,7 @@ export function FriendsPage() {
           ) : (
             <EmptyState
               title="Belum ada teman"
-              description="Tambahkan teman SMA yang akan ikut patungan."
+              description="Tambahkan orang yang akan ikut patungan."
               action={<Button onClick={openCreate}>Tambah teman</Button>}
             />
           )

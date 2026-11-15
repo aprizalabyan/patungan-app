@@ -2,9 +2,9 @@
 
 ## What this is
 
-Patungan ("chip in together") is a web app for a **treasurer** who collects money from high-school friends toward
-wedding gifts. The treasurer keeps a list of friends, creates an *event* per gift, adds friends to the event with an
-amount each, marks who has paid, and shares a read-only link so friends can see progress.
+Patungan Aja is a web app for managing and recording contributions or shared expenses for an event. The treasurer
+keeps a list of participants, creates an *event*, adds participants with their contribution amounts, marks who has
+paid, and can share a read-only link so others can see progress.
 
 This repository is the **frontend only**. The backend is a separate service reached over HTTP. Its source code is not
 part of this repository and is not assumed to be available; everything documented here about the backend is derived

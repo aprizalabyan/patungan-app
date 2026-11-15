@@ -61,7 +61,7 @@ export function EventFormDialog({ open, event, onClose, onSubmit }: EventFormDia
       open={open}
       onClose={onClose}
       title={event ? 'Ubah acara' : 'Buat acara baru'}
-      description="Acara adalah satu kegiatan patungan, misalnya kado pernikahan seorang teman."
+      description="Acara adalah kegiatan yang menjadi tujuan pengumpulan iuran atau patungan."
     >
       {/* Remount on open so the form always starts from the latest event data. */}
       {open && <EventForm event={event} onCancel={onClose} onSubmit={onSubmit} />}

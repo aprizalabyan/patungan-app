@@ -1,6 +1,6 @@
-# Patungan — Frontend
+# Patungan Aja — Frontend
 
-Responsive web app for a treasurer collecting contributions from high-school friends toward wedding gifts.
+Responsive web app for managing and recording contributions or shared expenses for an event.
 React 19 · Vite · TypeScript · React Router · TanStack Query · Tailwind CSS v4. All user-facing copy is in Indonesian.
 
 The backend (FastAPI + PostgreSQL) lives in a separate repository (`patungan-service`). This app talks to it only over

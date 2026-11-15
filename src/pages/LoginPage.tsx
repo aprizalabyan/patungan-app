@@ -61,7 +61,7 @@ export function LoginPage() {
       </div>
       <Card className="w-full max-w-sm p-6">
         <h1 className="text-xl font-semibold text-stone-900">Masuk sebagai bendahara</h1>
-        <p className="mt-1 text-sm text-stone-500">Kelola iuran kado pernikahan teman-teman SMA.</p>
+        <p className="mt-1 text-sm text-stone-500">Kelola dan catat iuran atau patungan untuk sebuah acara.</p>
         <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
           <TextField
             label="Email"
