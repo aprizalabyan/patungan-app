@@ -34,7 +34,7 @@ src/
     layout/              AppLayout (treasurer), PublicLayout, Logo
   features/
     auth/                AuthProvider, authContext/useAuth, ProtectedRoute
-    events/              useEvents.ts (queries/mutations), dialogs, summary panel, contributions table
+    events/              useEvents.ts (queries/mutations), mode-aware event/contribution dialogs, summary panel, contributions table
     friends/             useFriends.ts, FriendFormDialog
     payments/            usePayments.ts, account form, event account picker, contribution payment dialog (record / show / cancel)
     public/              usePublicEvents.ts
@@ -120,6 +120,11 @@ Hooks (all in `features/*/use*.ts`) wrap `services/*`. Components must use these
 | Update / (de)activate payment account | invalidate `['payment-accounts']`, every event's account list and all event summaries (breakdown shows the current identity) |
 | Replace event accounts (PUT) | set `events.paymentAccounts(id)` from the response; invalidate `summary(id)` |
 | Record / cancel the payment | write the returned contribution into the cached rows (`applyContributionRow`), then invalidate `contributions(eventId)` + `summary(eventId)` (via `invalidateContributionData`); on a 409 refetch the same, and on `payment_account_*` also the account lists |
+
+Event detail passes the API `payment_mode` into its participant form, table and summary. In `paid_only`, the add dialog
+loads the event's available accounts and submits account/date/payment notes together with the contribution; the normal
+contribution invalidation refreshes both participant rows and summary. In `track_status`, the add flow does not load
+accounts and keeps the existing later payment dialog flow.
 | Create / delete friend | invalidate `['friends']` |
 | Update friend | invalidate `['friends']` and `['events','contributions']` (embedded names) |
 

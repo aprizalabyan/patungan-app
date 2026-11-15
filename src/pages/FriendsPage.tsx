@@ -70,7 +70,7 @@ export function FriendsPage() {
         <div className="flex gap-2 pt-1 md:justify-end md:pt-0">
           <Button
             size="sm"
-            variant="ghost"
+            variant="secondary"
             onClick={() => {
               setEditing(f)
               setFormOpen(true)
@@ -81,7 +81,7 @@ export function FriendsPage() {
           </Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant="secondary"
             className="text-red-700 hover:bg-red-50"
             onClick={() => setDeleting(f)}
             aria-label={`Hapus ${f.name}`}

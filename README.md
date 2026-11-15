@@ -1,4 +1,4 @@
-# Patungan Aja — Frontend
+# Patungin Aja — Frontend
 
 Responsive web app for managing and recording contributions or shared expenses for an event.
 React 19 · Vite · TypeScript · React Router · TanStack Query · Tailwind CSS v4. All user-facing copy is in Indonesian.

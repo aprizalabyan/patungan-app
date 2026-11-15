@@ -3,18 +3,19 @@ import { Link } from 'react-router'
 import { AmountField } from '@/components/ui/AmountField'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
-import { TextAreaField, TextField } from '@/components/ui/FormField'
+import { SelectField, TextAreaField, TextField } from '@/components/ui/FormField'
 import { Spinner } from '@/components/ui/Spinner'
 import { InlineError } from '@/components/ui/States'
 import { useFriendsList } from '@/features/friends/useFriends'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { getErrorMessage } from '@/services/errors'
-import type { ContributionCreate } from '@/types/api'
+import { getErrorMessage, getFieldErrors } from '@/services/errors'
+import type { ContributionCreate, EventPaymentMode } from '@/types/api'
+import { useEventPaymentAccounts } from '@/features/payments/usePayments'
 import { cn } from '@/utils/cn'
-import { parseRupiahInput } from '@/utils/format'
+import { parseRupiahInput, toWibInputValue, wibInputToIso } from '@/utils/format'
 import { emptyToNull, hasErrors, MAX_AMOUNT, type FieldErrors } from '@/utils/validation'
 
-type Field = 'friend' | 'amount' | 'notes'
+type Field = 'friend' | 'amount' | 'notes' | 'account' | 'paid_at' | 'payment_notes'
 
 export function validateAmount(raw: string): string | undefined {
   const n = parseRupiahInput(raw)
@@ -29,37 +30,49 @@ interface AddContributionDialogProps {
   onClose: () => void
   /** Friends already in this event (from the loaded participant list); the backend still enforces uniqueness. */
   existingFriendIds: Set<string>
+  eventId: string
+  paymentMode: EventPaymentMode
   onSubmit: (body: ContributionCreate) => Promise<unknown>
 }
 
-export function AddContributionDialog({ open, onClose, existingFriendIds, onSubmit }: AddContributionDialogProps) {
+export function AddContributionDialog({ open, onClose, existingFriendIds, eventId, paymentMode, onSubmit }: AddContributionDialogProps) {
+  const paidOnly = paymentMode === 'paid_only'
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title="Tambah peserta"
-      description="Pilih teman dari daftar teman, lalu tentukan nominal iurannya. Status awal: belum bayar."
+      title={paidOnly ? 'Catat iuran' : 'Tambah peserta'}
+      description={paidOnly ? 'Pilih teman, nominal iuran, rekening tujuan, dan waktu pembayaran.' : 'Pilih teman dari daftar teman, lalu tentukan nominal iurannya. Status awal: belum bayar.'}
     >
-      {open && <AddContributionForm existingFriendIds={existingFriendIds} onCancel={onClose} onSubmit={onSubmit} />}
+      {open && <AddContributionForm existingFriendIds={existingFriendIds} eventId={eventId} paidOnly={paidOnly} onCancel={onClose} onSubmit={onSubmit} />}
     </Dialog>
   )
 }
 
 function AddContributionForm({
   existingFriendIds,
+  eventId,
+  paidOnly,
   onCancel,
   onSubmit,
 }: {
   existingFriendIds: Set<string>
+  eventId: string
+  paidOnly: boolean
   onCancel: () => void
   onSubmit: (body: ContributionCreate) => Promise<unknown>
 }) {
   const [search, setSearch] = useState('')
   const debounced = useDebouncedValue(search.trim(), 300)
   const friends = useFriendsList({ search: debounced || undefined, page: 1, page_size: 20 })
+  const accounts = useEventPaymentAccounts(eventId, paidOnly)
+  const activeAccounts = (accounts.data ?? []).filter((account) => account.is_active)
   const [friendId, setFriendId] = useState<string | null>(null)
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
+  const [accountId, setAccountId] = useState('')
+  const [paidAt, setPaidAt] = useState(() => toWibInputValue(new Date()))
+  const [paymentNotes, setPaymentNotes] = useState('')
   const [errors, setErrors] = useState<FieldErrors<Field>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -70,15 +83,38 @@ function AddContributionForm({
       friend: friendId ? undefined : 'Pilih satu teman.',
       amount: validateAmount(amount),
       notes: notes.trim().length > 500 ? 'Catatan maksimal 500 karakter.' : undefined,
+      account: paidOnly && !accountId ? 'Pilih rekening tujuan.' : undefined,
+      paid_at: paidOnly && !wibInputToIso(paidAt) ? 'Waktu pembayaran wajib diisi dengan benar.' : undefined,
+      payment_notes: paymentNotes.trim().length > 2000 ? 'Catatan pembayaran maksimal 2.000 karakter.' : undefined,
     }
     setErrors(v)
     setSubmitError(null)
     if (hasErrors(v) || !friendId) return
     setSubmitting(true)
     try {
-      await onSubmit({ friend_id: friendId, amount: parseRupiahInput(amount)!, notes: emptyToNull(notes) })
+      await onSubmit({
+        friend_id: friendId,
+        amount: parseRupiahInput(amount)!,
+        notes: emptyToNull(notes),
+        ...(paidOnly ? {
+          payment_account_id: accountId,
+          paid_at: wibInputToIso(paidAt)!,
+          ...(paymentNotes.trim() ? { payment_notes: emptyToNull(paymentNotes) } : {}),
+        } : {}),
+      })
     } catch (err) {
-      setSubmitError(getErrorMessage(err, 'Gagal menambahkan peserta.'))
+      const server = getFieldErrors(err)
+      if (Object.keys(server).length > 0) {
+        setErrors((current) => ({
+          ...current,
+          amount: server.amount,
+          notes: server.notes,
+          account: server.payment_account_id,
+          paid_at: server.paid_at,
+          payment_notes: server.payment_notes,
+        }))
+      }
+      setSubmitError(getErrorMessage(err, paidOnly ? 'Gagal mencatat iuran.' : 'Gagal menambahkan peserta.'))
     } finally {
       setSubmitting(false)
     }
@@ -158,6 +194,15 @@ function AddContributionForm({
       </fieldset>
 
       <AmountField label="Nominal iuran (Rp)" required value={amount} onChange={setAmount} error={errors.amount} />
+      {paidOnly && (accounts.isPending ? <div className="text-sm text-stone-500"><Spinner className="mr-2 inline size-4" />Memuat rekening acara…</div> : accounts.isError ? <div className="space-y-2"><p role="alert" className="text-sm text-red-700">Gagal memuat rekening acara. {getErrorMessage(accounts.error)}</p><Button size="sm" variant="secondary" onClick={() => void accounts.refetch()}>Coba lagi</Button></div> : <>
+        {activeAccounts.length === 0 && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">Belum ada rekening aktif yang tersedia untuk acara ini.</p>}
+        <SelectField label="Rekening tujuan" required value={accountId} onChange={(e) => setAccountId(e.target.value)} error={errors.account} disabled={activeAccounts.length === 0} hint="Hanya rekening aktif yang tersedia untuk acara ini.">
+          <option value="">Pilih rekening…</option>
+          {activeAccounts.map((a) => <option key={a.id} value={a.id}>{a.type === 'cash' ? `Tunai — ${a.account_name}` : `${a.provider_name} — ${a.account_name} (${a.account_number})`}</option>)}
+        </SelectField>
+        <TextField label="Waktu pembayaran (WIB)" required type="datetime-local" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} error={errors.paid_at} />
+        <TextAreaField label="Catatan pembayaran" value={paymentNotes} onChange={(e) => setPaymentNotes(e.target.value)} error={errors.payment_notes} maxLength={2000} hint="Opsional. Hanya terlihat oleh bendahara." />
+      </>)}
       <TextAreaField
         label="Catatan"
         value={notes}
@@ -171,8 +216,8 @@ function AddContributionForm({
         <Button variant="secondary" onClick={onCancel} disabled={submitting}>
           Batal
         </Button>
-        <Button type="submit" loading={submitting}>
-          Tambah peserta
+        <Button type="submit" loading={submitting} disabled={paidOnly && (!accounts.data || accounts.isError || activeAccounts.length === 0)}>
+          {paidOnly ? 'Catat iuran' : 'Tambah peserta'}
         </Button>
       </div>
     </form>

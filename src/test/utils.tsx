@@ -113,6 +113,7 @@ export function makeEvent(overrides: Partial<Event> = {}): Event {
     event_date: '2026-12-12',
     target_amount: 2_000_000,
     status: 'active',
+    payment_mode: 'track_status',
     is_public: true,
     created_by: 'u-1',
     created_at: '2026-10-01T00:00:00Z',

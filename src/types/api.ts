@@ -11,6 +11,7 @@ export type ISODate = string
 export type ISODateTime = string
 
 export type EventStatus = 'active' | 'completed'
+export type EventPaymentMode = 'paid_only' | 'track_status'
 /** Set by the backend only: `pending` until a payment is recorded, `paid` after. There is nothing in between. */
 export type PaymentStatus = 'pending' | 'paid'
 export type PaymentAccountType = 'bank' | 'e_wallet' | 'cash'
@@ -90,6 +91,7 @@ export interface Event {
   event_date: ISODate | null
   target_amount: number | null
   status: EventStatus
+  payment_mode: EventPaymentMode
   is_public: boolean
   created_by: UUID
   created_at: ISODateTime
@@ -102,6 +104,7 @@ export interface EventCreate {
   event_date?: ISODate | null
   target_amount?: number | null
   status?: EventStatus
+  payment_mode?: EventPaymentMode
   is_public?: boolean
 }
 
@@ -173,10 +176,14 @@ export interface ContributionCreate {
   friend_id: UUID
   amount: number
   notes?: string | null
+  /** Required by the backend for paid_only events; rejected for track_status. */
+  payment_account_id?: UUID
+  paid_at?: ISODateTime
+  payment_notes?: string | null
 }
 
 /**
- * `amount` may be omitted but must not be null, and is locked while the contribution is paid.
+ * `amount` may be omitted but must not be null. Paid amount edits are allowed only for paid_only events.
  * Send only changed fields. The app never sends `payment_status` (422 when it differs).
  */
 export interface ContributionUpdate {

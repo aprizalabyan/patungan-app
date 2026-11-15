@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { EventStatusBadge, VisibilityBadge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -42,9 +42,7 @@ export function EventsPage() {
       header: 'Acara',
       hideMobileLabel: true,
       cell: (e) => (
-        <Link to={`/events/${e.id}`} className="font-medium text-stone-900 hover:text-green-700 hover:underline">
-          {e.title}
-        </Link>
+        <span className="font-medium text-stone-900">{e.title}</span>
       ),
     },
     { key: 'date', header: 'Tanggal', className: 'whitespace-nowrap', cell: (e) => formatDate(e.event_date) },
@@ -64,6 +62,17 @@ export function EventsPage() {
         const s = summaries.byId.get(e.id)
         return s ? formatRupiah(s.total_received) : '…'
       },
+    },
+    {
+      key: 'actions',
+      header: 'Aksi',
+      hideMobileLabel: true,
+      className: 'md:text-right',
+      cell: (e) => (
+        <Button size="sm" variant="secondary" onClick={() => navigate(`/events/${e.id}`)} aria-label={`Detail ${e.title}`}>
+          Detail
+        </Button>
+      ),
     },
   ]
 

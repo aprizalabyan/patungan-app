@@ -55,6 +55,8 @@ const MESSAGES_BY_CODE: Record<string, string> = {
   payment_status_not_editable:
     'Status dicatat otomatis oleh pembayaran. Catat atau batalkan pembayaran untuk mengubahnya.',
   duplicate_payment_account: 'Ada rekening yang terpilih lebih dari satu kali. Periksa kembali pilihan Anda.',
+  event_payment_mode_locked: 'Mode pembayaran tidak dapat diubah karena acara sudah memiliki peserta.',
+  paid_only_payment_cannot_be_cancelled: 'Pembayaran pada acara catat lunas saja tidak dapat dibatalkan.',
 }
 
 /** User-facing Indonesian message for any error thrown by the API layer. */

@@ -74,11 +74,10 @@ Run `npm run typecheck`, `npm test` and `npm run build` before declaring work fi
     logout or credentialed cookies. The frontend implementation follows `docs/AUTHENTICATION.md` assumptions and has
     only been tested with mocked responses.
 - The frontend test suite uses mocked responses and has not been exercised against a live backend.
-- **Payment accounts and contribution payments follow the backend docs in `BE/docs/`** and have only been tested with
-  mocked responses. The model is **one payment per contribution** (`PATCH /contributions/{id}/payment`, `POST .../payment/cancel`); the
-  earlier multi-payment UI is gone. Assumptions not stated there: saving an event's account set with an empty list is
-  allowed; the cancel and payment notes limits (2000) come from the BE schema docs; payment times are entered and shown in WIB and
-  sent with a `+07:00` offset; an omitted `notes` (not `null`) is sent when the notes field is empty.
+- **Event payment modes and contribution payments follow the latest backend docs in `BE/docs/`** and have only been
+  tested with mocked responses. `track_status` uses the single-payment endpoints (`PATCH /contributions/{id}/payment`,
+  `POST .../payment/cancel`); `paid_only` records payment details on contribution creation and cannot be cancelled.
+  Both modes use backend summaries and have not been exercised against a live backend.
 - **Not verified end-to-end.** The app has only been tested against mocked responses, not a running backend.
 
 When you fix or discover an issue, update this list.

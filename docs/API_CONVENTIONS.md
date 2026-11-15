@@ -1,9 +1,8 @@
 # API conventions
 
-How the frontend talks to the backend. Everything here is derived from this repository (`src/services/*`,
-`src/types/api.ts`, tests, README). The backend's own source and OpenAPI document are **not** available to this
-repository's tooling; if you need to confirm a shape, check the running backend's interactive API docs or ask the
-backend owner, and then update `src/types/api.ts` and this file. **Do not guess endpoints or fields.**
+How the frontend talks to the backend. Endpoint and schema contract details follow the separately maintained
+`BE/docs/API_CONVENTIONS.md` and `BE/docs/BUSINESS_RULES.md`; frontend services, types and tests implement that
+contract. **Do not guess endpoints or fields.**
 
 ## Base URL and transport
 
@@ -64,14 +63,14 @@ Paths are relative to the base URL. "Auth" = needs Bearer token. Service functio
 | Method & path | Service | Request → Response |
 |---|---|---|
 | `GET /events` | `eventsService.list` | query `EventListParams {page?, page_size?, status?}` → `Page<Event>` |
-| `POST /events` | `create` | `EventCreate` → `Event` |
+| `POST /events` | `create` | `EventCreate` (includes `payment_mode`, default `track_status`) → `Event` |
 | `GET /events/{event_id}` | `get` | → `Event` |
 | `PATCH /events/{event_id}` | `update` | `EventUpdate` → `Event` |
 | `DELETE /events/{event_id}` | `remove` | → 204 |
 | `GET /events/{event_id}/summary` | `summary` | → `EventSummary` |
 | `GET /events/{event_id}/contributions` | `contributionsService.list` | query `ContributionListParams {page?, page_size?, payment_status?}` → `Page<Contribution>` |
-| `POST /events/{event_id}/contributions` | `create` | `ContributionCreate {friend_id, amount, notes?}` → `Contribution` |
-| `PATCH /contributions/{contribution_id}` | `update` | `ContributionUpdate` → `Contribution` |
+| `POST /events/{event_id}/contributions` | `create` | `ContributionCreate {friend_id, amount, notes?, payment_account_id?, paid_at?, payment_notes?}` → `Contribution`; payment fields are sent only for `paid_only`, which creates a paid row atomically |
+| `PATCH /contributions/{contribution_id}` | `update` | `ContributionUpdate` → `Contribution`; changing `amount` is supported while paid only for `paid_only` events, with payment metadata preserved |
 | `DELETE /contributions/{contribution_id}` | `remove` | → 204 |
 
 ### Payment accounts and the contribution payment (`paymentsService.ts`), all authenticated
@@ -93,6 +92,10 @@ There is no DELETE for accounts or payments. `Contribution` carries the payment 
 (snapshot taken when paid, `null` while pending and for legacy data) and `payment_notes`. `payment_status` is only
 `pending | paid`. There is no payment list endpoint, no `paid_amount` and no multi-payment or void endpoint (removed
 from the backend). `GET /events/{id}/summary` returns `EventSummary` (public summary: `PublicEventSummary`).
+`Event.payment_mode` is `paid_only | track_status`. The contribution create schema accepts payment details for
+`paid_only` only; `track_status` rejects them and continues to use `PATCH /contributions/{id}/payment`. `paid_only`
+cancellation is rejected with `paid_only_payment_cannot_be_cancelled`; changing an event's mode after contributions
+exist is rejected with `event_payment_mode_locked`.
 
 ### Public (`publicService`), no auth, read-only
 
@@ -155,7 +158,7 @@ Error codes the frontend knows about:
 | `payment_account_not_available` | 409 | Account not offered by the event; set the event accounts first. Lists refetched |
 | `contribution_already_paid` | 409 | Recording on a paid contribution (another session paid first); rows and summary refetched |
 | `contribution_not_paid` | 409 | Cancelling a pending contribution; rows and summary refetched |
-| `paid_contribution_amount_locked` | 409 | Changing `amount` while paid (the edit dialog disables the field) |
+| `paid_contribution_amount_locked` | 409 | Changing `amount` while paid in `track_status`; cancel that payment first |
 | `contribution_has_payments` | 409 | Participant is paid or ever had a payment cancelled; cannot be removed |
 | `payment_status_not_editable` | 422 | Mapped only; the app never sends `payment_status` |
 | `duplicate_payment_account` | 422 | Repeated account id in the event set (the picker cannot produce it) |

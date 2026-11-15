@@ -1,13 +1,25 @@
 import { PaymentAccountTypeBadge } from '@/components/ui/Badge'
 import { Card, StatCard } from '@/components/ui/Card'
 import { ProgressBar } from '@/components/ui/ProgressBar'
-import type { EventSummary } from '@/types/api'
+import type { EventPaymentMode, EventSummary } from '@/types/api'
 import { formatRupiah } from '@/utils/format'
 import { UNKNOWN_ACCOUNT_LABEL } from '@/utils/labels'
 
 /** Renders backend-computed totals as-is; nothing here is recalculated on the client. */
-export function EventSummaryPanel({ summary }: { summary: EventSummary }) {
+export function EventSummaryPanel({ summary, paymentMode }: { summary: EventSummary; paymentMode: EventPaymentMode }) {
   const hasTarget = summary.target_amount !== null && summary.target_amount > 0
+  if (paymentMode === 'paid_only') {
+    return (
+      <section aria-label="Ringkasan keuangan" className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard label="Total peserta" value={summary.total_participants} />
+          <StatCard label="Total terkumpul" value={formatRupiah(summary.total_received)} tone="green" hint={hasTarget ? `dari target ${formatRupiah(summary.target_amount!)}` : 'Tanpa target'} />
+        </div>
+        {summary.progress_percent !== null && <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm"><ProgressBar percent={summary.progress_percent} />{summary.progress_percent > 100 && <p className="mt-2 text-xs text-stone-500">Dana terkumpul sudah melebihi target.</p>}</div>}
+        <ReceiptsByAccount summary={summary} />
+      </section>
+    )
+  }
   return (
     <section aria-label="Ringkasan keuangan" className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">

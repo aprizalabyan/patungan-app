@@ -1,11 +1,13 @@
 import { PaymentStatusBadge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import type { Contribution } from '@/types/api'
+import type { Contribution, EventPaymentMode } from '@/types/api'
 import { formatDateTime, formatRupiah } from '@/utils/format'
+import { PaymentAccountInfo } from '@/features/payments/PaymentAccountInfo'
 
 interface ContributionsTableProps {
   contributions: Contribution[]
+  paymentMode: EventPaymentMode
   /** Opens the dialog that records, shows or cancels the row's payment. */
   onPayments: (c: Contribution) => void
   onEdit: (c: Contribution) => void
@@ -14,6 +16,7 @@ interface ContributionsTableProps {
 
 export function ContributionsTable({
   contributions,
+  paymentMode,
   onPayments,
   onEdit,
   onDelete,
@@ -29,7 +32,7 @@ export function ContributionsTable({
             {c.friend.name}
             {c.friend.nickname && <span className="font-normal text-stone-500"> ({c.friend.nickname})</span>}
           </p>
-          {c.notes && <p className="mt-0.5 text-xs break-words text-stone-500">Catatan: {c.notes}</p>}
+          {c.notes && <p className="mt-0.5 text-xs wrap-break-word text-stone-500">Catatan: {c.notes}</p>}
         </div>
       ),
     },
@@ -50,6 +53,10 @@ export function ContributionsTable({
       className: 'whitespace-nowrap text-stone-600',
       cell: (c) => (c.payment_status === 'paid' && c.paid_at ? formatDateTime(c.paid_at) : '-'),
     },
+    ...(paymentMode === 'paid_only' ? [{
+      key: 'account', header: 'Rekening',
+      cell: (c: Contribution) => c.payment_account ? <PaymentAccountInfo account={c.payment_account} /> : '-',
+    } satisfies Column<Contribution>] : []),
     {
       key: 'actions',
       header: 'Aksi',
@@ -57,32 +64,31 @@ export function ContributionsTable({
       className: 'md:text-right',
       cell: (c) => (
         <div className="flex w-full flex-wrap gap-2 pt-1 md:justify-end md:pt-0">
-          <Button
+          {paymentMode === 'track_status' && <Button
             size="sm"
             variant={c.payment_status === 'paid' ? 'secondary' : 'primary'}
             onClick={() => onPayments(c)}
             aria-label={`${c.payment_status === 'paid' ? 'Lihat pembayaran' : 'Catat pembayaran'} ${c.friend.name}`}
           >
             {c.payment_status === 'paid' ? 'Lihat pembayaran' : 'Catat pembayaran'}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => onEdit(c)} aria-label={`Ubah iuran ${c.friend.name}`}>
+          </Button>}
+          <Button size="sm" variant="secondary" onClick={() => onEdit(c)} aria-label={`Ubah iuran ${c.friend.name}`}>
             Ubah
           </Button>
-          <Button
+          {paymentMode === 'track_status' && <Button
             size="sm"
-            variant="ghost"
+            variant="secondary"
             className="text-red-700 hover:bg-red-50"
             onClick={() => onDelete(c)}
             aria-label={`Hapus ${c.friend.name} dari acara`}
           >
             Hapus
-          </Button>
+          </Button>}
         </div>
       ),
     },
   ]
 
-  return (
-    <DataTable caption="Daftar peserta dan status pembayaran" columns={columns} rows={contributions} rowKey={(c) => c.id} />
-  )
+  const visibleColumns = paymentMode === 'paid_only' ? columns : columns.filter((column) => column.key !== 'account')
+  return <DataTable caption="Daftar peserta dan status pembayaran" columns={visibleColumns} rows={contributions} rowKey={(c) => c.id} />
 }

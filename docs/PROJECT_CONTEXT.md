@@ -2,7 +2,7 @@
 
 ## What this is
 
-Patungan Aja is a web app for managing and recording contributions or shared expenses for an event. The treasurer
+Patungin Aja is a web app for managing and recording contributions or shared expenses for an event. The treasurer
 keeps a list of participants, creates an *event*, adds participants with their contribution amounts, marks who has
 paid, and can share a read-only link so others can see progress.
 
@@ -21,9 +21,11 @@ There is exactly one application user role (the treasurer). There is no sign-up 
 
 ## Scope
 
-The treasurer can: log in; manage the master list of friends; create, edit, delete events; add friends to events with a
-contribution amount; manage payment accounts (bank / e-wallet) and choose which ones an event accepts; record and cancel
-the single payment of a contribution (the payment always equals the bill); edit contribution amount (while pending) and notes;
+The treasurer can: log in; manage the master list of friends; create, edit, delete events; choose `track_status` or
+`paid_only` payment mode; add friends to events with a contribution amount; manage payment accounts (bank / e-wallet)
+and choose which ones an event accepts; record payments immediately in `paid_only`, or record/cancel the single payment
+later in `track_status` (the payment always equals the bill); edit pending contribution amounts and notes, and edit
+paid `paid_only` amounts with confirmation while retaining their payment metadata;
 remove contributions that were never paid; review financial summaries including receipts per account; copy the public event link; copy a WhatsApp-ready summary.
 
 Out of scope for this repo: backend code, database configuration, user registration, password reset, payments
@@ -72,7 +74,7 @@ Defined in `src/types/api.ts`.
 
 - **Friend**: `id`, `name`, `nickname | null`, `phone | null`, `created_at`. Reused across events.
 - **Event**: `id`, `title`, `description | null`, `event_date | null`, `target_amount | null`,
-  `status` (`active` | `completed`), `is_public`, `created_by`, timestamps.
+  `status` (`active` | `completed`), `payment_mode` (`paid_only` | `track_status`), `is_public`, `created_by`, timestamps.
 - **Contribution** (a friend's participation in one event): `id`, `event_id`, `friend_id`, embedded
   `friend {id, name, nickname}`, `amount` (the bill), `payment_status` (`pending` | `paid`, set by the backend),
   `paid_at | null`, `payment_account` (snapshot taken when paid; `null` while pending and for legacy paid data),
@@ -98,7 +100,7 @@ See [README.md](../README.md) for setup. Key facts:
 
 ## Status and known gaps
 
-- Implemented: all pages above, with loading, empty, error and validation states, and automated tests (`npm test`).
+- Implemented: all pages above, both event payment modes, with loading, empty, error and validation states, and automated tests (`npm test`).
 - **Not verified against a running backend.** Tests use mocked `fetch`.
 - API requests use the same-origin `/api/v1` path. Vite proxies it locally; on Vercel, `vercel.json` routes it to
   `api/proxy.ts`, which uses the server-only `BACKEND_API_URL` environment variable.

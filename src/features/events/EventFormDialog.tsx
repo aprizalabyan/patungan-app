@@ -5,7 +5,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { CheckboxField, SelectField, TextAreaField, TextField } from '@/components/ui/FormField'
 import { InlineError } from '@/components/ui/States'
 import { getErrorMessage, getFieldErrors } from '@/services/errors'
-import type { Event, EventCreate, EventStatus } from '@/types/api'
+import type { Event, EventCreate, EventPaymentMode, EventStatus } from '@/types/api'
 import { formatAmountInput, parseRupiahInput } from '@/utils/format'
 import { emptyToNull, hasErrors, MAX_AMOUNT, type FieldErrors } from '@/utils/validation'
 
@@ -18,6 +18,7 @@ interface FormState {
   targetAmount: string
   status: EventStatus
   isPublic: boolean
+  paymentMode: EventPaymentMode
 }
 
 function initialState(event?: Event): FormState {
@@ -28,6 +29,7 @@ function initialState(event?: Event): FormState {
     targetAmount: event?.target_amount != null ? formatAmountInput(String(event.target_amount)) : '',
     status: event?.status ?? 'active',
     isPublic: event?.is_public ?? true,
+    paymentMode: event?.payment_mode ?? 'track_status',
   }
 }
 
@@ -53,9 +55,10 @@ interface EventFormDialogProps {
   event?: Event
   onClose: () => void
   onSubmit: (body: EventCreate) => Promise<unknown>
+  paymentModeLocked?: boolean
 }
 
-export function EventFormDialog({ open, event, onClose, onSubmit }: EventFormDialogProps) {
+export function EventFormDialog({ open, event, onClose, onSubmit, paymentModeLocked = false }: EventFormDialogProps) {
   return (
     <Dialog
       open={open}
@@ -64,17 +67,19 @@ export function EventFormDialog({ open, event, onClose, onSubmit }: EventFormDia
       description="Acara adalah kegiatan yang menjadi tujuan pengumpulan iuran atau patungan."
     >
       {/* Remount on open so the form always starts from the latest event data. */}
-      {open && <EventForm event={event} onCancel={onClose} onSubmit={onSubmit} />}
+      {open && <EventForm event={event} paymentModeLocked={paymentModeLocked} onCancel={onClose} onSubmit={onSubmit} />}
     </Dialog>
   )
 }
 
 function EventForm({
   event,
+  paymentModeLocked,
   onCancel,
   onSubmit,
 }: {
   event?: Event
+  paymentModeLocked: boolean
   onCancel: () => void
   onSubmit: (body: EventCreate) => Promise<unknown>
 }) {
@@ -100,6 +105,7 @@ function EventForm({
       target_amount: form.targetAmount ? parseRupiahInput(form.targetAmount) : null,
       status: form.status,
       is_public: form.isPublic,
+      payment_mode: form.paymentMode,
     }
     setSubmitting(true)
     try {
@@ -155,6 +161,18 @@ function EventForm({
         <option value="active">Aktif</option>
         <option value="completed">Selesai</option>
       </SelectField>
+      <fieldset className="space-y-3" disabled={paymentModeLocked}>
+        <legend className="text-sm font-medium text-stone-700">Mode pembayaran</legend>
+        <label className="flex cursor-pointer gap-3 rounded-lg border border-stone-200 p-3 has-checked:border-green-700 has-checked:bg-green-50">
+          <input type="radio" name="payment_mode" value="paid_only" checked={form.paymentMode === 'paid_only'} onChange={() => update('paymentMode', 'paid_only')} className="mt-1 accent-green-700" />
+          <span><span className="block text-sm font-medium text-stone-900">Catat yang sudah lunas saja</span><span className="mt-1 block text-sm text-stone-600">Hanya mencatat peserta yang sudah membayar. Tambah peserta sekaligus mencatat pembayarannya.</span></span>
+        </label>
+        <label className="flex cursor-pointer gap-3 rounded-lg border border-stone-200 p-3 has-checked:border-green-700 has-checked:bg-green-50">
+          <input type="radio" name="payment_mode" value="track_status" checked={form.paymentMode === 'track_status'} onChange={() => update('paymentMode', 'track_status')} className="mt-1 accent-green-700" />
+          <span><span className="block text-sm font-medium text-stone-900">Pantau status pembayaran</span><span className="mt-1 block text-sm text-stone-600">Catat peserta dan nominal iuran terlebih dahulu, kemudian perbarui status saat pembayaran diterima.</span></span>
+        </label>
+        {paymentModeLocked && <p className="text-xs text-stone-500">Mode tidak dapat diubah karena acara sudah memiliki peserta.</p>}
+      </fieldset>
       <CheckboxField
         label="Tampilkan di halaman publik"
         hint="Siapa pun yang memiliki tautan dapat melihat nama peserta dan status pembayarannya."

@@ -91,6 +91,8 @@ The shell on Windows may be PowerShell or Git Bash; npm scripts work in both.
 - Test user-visible behaviour: roles, labels and text, not implementation details. Prefer
   `findBy*`/`waitFor` over timeouts.
 - For each feature cover the happy path plus at least one of: loading, empty, validation, API error.
+- Event tests cover the default and selected payment modes, locking after contributions exist, and each mode's
+  contribution/payment flow. Regression coverage keeps `track_status` free of payment fields in the create request.
 - For mutations assert both the request (`calls`) and the resulting UI, and, when relevant, that dependent queries were
   refetched (e.g. participants and summary after a payment change).
 - Public-page tests must keep asserting that only `/public/*` is called and no `Authorization` header is sent.

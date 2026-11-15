@@ -74,7 +74,7 @@ export function PaymentAccountsPage() {
         <div className="flex flex-wrap gap-2 pt-1 md:justify-end md:pt-0">
           <Button
             size="sm"
-            variant="ghost"
+            variant="secondary"
             onClick={() => {
               setEditing(a)
               setFormOpen(true)
@@ -86,7 +86,7 @@ export function PaymentAccountsPage() {
           {a.is_active ? (
             <Button
               size="sm"
-              variant="ghost"
+              variant="secondary"
               className="text-red-700 hover:bg-red-50"
               onClick={() => setDeactivating(a)}
               aria-label={`Nonaktifkan rekening ${a.provider_name} ${a.account_name}`}

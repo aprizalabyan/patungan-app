@@ -66,10 +66,11 @@ export function useSetPaymentAccountActive() {
 
 // --- Event payment accounts -----------------------------------------------------
 
-export function useEventPaymentAccounts(eventId: string) {
+export function useEventPaymentAccounts(eventId: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.events.paymentAccounts(eventId),
     queryFn: ({ signal }) => eventPaymentAccountsService.list(eventId, signal),
+    enabled,
   })
 }
 

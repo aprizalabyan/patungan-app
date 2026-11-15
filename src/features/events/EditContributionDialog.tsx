@@ -1,22 +1,23 @@
 import { useState, type FormEvent } from 'react'
 import { AmountField } from '@/components/ui/AmountField'
 import { Button } from '@/components/ui/Button'
-import { Dialog } from '@/components/ui/Dialog'
+import { ConfirmDialog, Dialog } from '@/components/ui/Dialog'
 import { TextAreaField } from '@/components/ui/FormField'
 import { InlineError } from '@/components/ui/States'
 import { getErrorMessage } from '@/services/errors'
-import type { Contribution, ContributionUpdate } from '@/types/api'
-import { formatAmountInput, parseRupiahInput } from '@/utils/format'
+import type { Contribution, ContributionUpdate, EventPaymentMode } from '@/types/api'
+import { formatAmountInput, formatRupiah, parseRupiahInput } from '@/utils/format'
 import { emptyToNull, hasErrors, type FieldErrors } from '@/utils/validation'
 import { validateAmount } from './AddContributionDialog'
 
 interface EditContributionDialogProps {
   contribution: Contribution | null
+  paymentMode: EventPaymentMode
   onClose: () => void
   onSubmit: (id: string, body: ContributionUpdate) => Promise<unknown>
 }
 
-export function EditContributionDialog({ contribution, onClose, onSubmit }: EditContributionDialogProps) {
+export function EditContributionDialog({ contribution, paymentMode, onClose, onSubmit }: EditContributionDialogProps) {
   return (
     <Dialog
       open={contribution !== null}
@@ -24,54 +25,69 @@ export function EditContributionDialog({ contribution, onClose, onSubmit }: Edit
       title="Ubah iuran"
       description={contribution ? `Peserta: ${contribution.friend.name}` : undefined}
     >
-      {contribution && <EditForm contribution={contribution} onCancel={onClose} onSubmit={onSubmit} />}
+      {contribution && <EditForm contribution={contribution} paymentMode={paymentMode} onCancel={onClose} onSubmit={onSubmit} />}
     </Dialog>
   )
 }
 
 function EditForm({
   contribution,
+  paymentMode,
   onCancel,
   onSubmit,
 }: {
   contribution: Contribution
+  paymentMode: EventPaymentMode
   onCancel: () => void
   onSubmit: (id: string, body: ContributionUpdate) => Promise<unknown>
 }) {
   const locked = contribution.payment_status === 'paid'
+  const paidOnly = paymentMode === 'paid_only'
+  const amountLocked = locked && !paidOnly
   const [amount, setAmount] = useState(formatAmountInput(String(contribution.amount)))
   const [notes, setNotes] = useState(contribution.notes ?? '')
   const [errors, setErrors] = useState<FieldErrors<'amount' | 'notes'>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [confirmingAmount, setConfirmingAmount] = useState<ContributionUpdate | null>(null)
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    const v = {
-      amount: locked ? undefined : validateAmount(amount),
-      notes: notes.trim().length > 500 ? 'Catatan maksimal 500 karakter.' : undefined,
-    }
-    setErrors(v)
-    setSubmitError(null)
-    if (hasErrors(v)) return
+  async function saveChanges(changes: ContributionUpdate) {
     setSubmitting(true)
+    setSubmitError(null)
     try {
-      // Send only what changed. Never send payment_status (the backend owns it), and never the
-      // amount of a paid contribution (it is locked until the payment is cancelled).
-      const changes: ContributionUpdate = {}
-      const newAmount = parseRupiahInput(amount)!
-      if (!locked && newAmount !== contribution.amount) changes.amount = newAmount
-      if (emptyToNull(notes) !== contribution.notes) changes.notes = emptyToNull(notes)
-      if (Object.keys(changes).length === 0) {
-        onCancel()
-        return
-      }
       await onSubmit(contribution.id, changes)
+      onCancel()
     } catch (err) {
       setSubmitError(getErrorMessage(err, 'Gagal menyimpan perubahan.'))
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    const v = {
+      amount: amountLocked ? undefined : validateAmount(amount),
+      notes: notes.trim().length > 500 ? 'Catatan maksimal 500 karakter.' : undefined,
+    }
+    setErrors(v)
+    setSubmitError(null)
+    if (hasErrors(v)) return
+    // Send only changed fields. The backend preserves payment status and metadata when
+    // changing amount in paid_only; track_status paid amounts stay locked until cancellation.
+    const changes: ContributionUpdate = {}
+    const newAmount = parseRupiahInput(amount)!
+    if (!amountLocked && newAmount !== contribution.amount) changes.amount = newAmount
+    if (emptyToNull(notes) !== contribution.notes) changes.notes = emptyToNull(notes)
+    if (Object.keys(changes).length === 0) {
+      onCancel()
+      return
+    }
+    if (locked && paidOnly && changes.amount !== undefined) {
+      setConfirmingAmount(changes)
+      return
+    }
+    await saveChanges(changes)
   }
 
   return (
@@ -82,10 +98,12 @@ function EditForm({
         value={amount}
         onChange={setAmount}
         error={errors.amount}
-        disabled={locked}
+        disabled={amountLocked}
         hint={
-          locked
+          amountLocked
             ? 'Nominal terkunci karena iuran sudah dibayar. Batalkan pembayaran terlebih dahulu untuk mengubahnya.'
+            : locked && paidOnly
+              ? 'Mengubah nominal tidak membatalkan pembayaran atau mengubah rekening dan waktu pembayaran.'
             : undefined
         }
       />
@@ -107,6 +125,31 @@ function EditForm({
           Simpan
         </Button>
       </div>
+      <ConfirmDialog
+        open={confirmingAmount !== null}
+        title="Konfirmasi perubahan nominal?"
+        message={
+          confirmingAmount?.amount !== undefined && (
+            <p>
+              Nominal iuran <strong>{formatRupiah(contribution.amount)}</strong> akan diubah menjadi{' '}
+              <strong>{formatRupiah(confirmingAmount.amount)}</strong>. Status lunas, rekening, dan waktu pembayaran
+              akan tetap dipertahankan.
+            </p>
+          )
+        }
+        confirmLabel="Simpan perubahan"
+        cancelLabel="Kembali"
+        tone="primary"
+        loading={submitting}
+        error={submitError}
+        onCancel={() => {
+          setConfirmingAmount(null)
+          setSubmitError(null)
+        }}
+        onConfirm={() => {
+          if (confirmingAmount) void saveChanges(confirmingAmount)
+        }}
+      />
     </form>
   )
 }

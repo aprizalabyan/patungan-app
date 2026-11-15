@@ -41,7 +41,9 @@ described only as far as the frontend code, types and tests reveal it.
 ## 3a. Events
 
 - Fields: `title` (required), `description`, `event_date`, `target_amount` (all optional), `status`
-  (`active` | `completed`, default `active`), `is_public` (default `true`).
+  (`active` | `completed`, default `active`), `is_public` (default `true`), and `payment_mode`
+  (`track_status` by default or `paid_only`). The backend permits changing the mode only before the first
+  contribution; the detail form disables the choice once contribution data is loaded and the API remains authoritative.
 - A blank target means "no target": send `null`. Progress is shown **only** when the backend returns a non-null
   `progress_percent` (the backend returns null for a missing or zero target).
 - `progress_percent` is **not capped at 100**. The progress bar width is clamped to 100% for display, the label shows
@@ -55,13 +57,19 @@ described only as far as the frontend code, types and tests reveal it.
 - A friend may have **only one contribution per event**. The add dialog disables friends already listed in the event
   ("Sudah terdaftar"). That check only uses the loaded list, so the backend remains the authority: a
   `duplicate_contribution` (409) response is shown as "Teman ini sudah terdaftar di acara ini."
-- **New contributions default to pending.** The create request (`ContributionCreate`) has no status field; the UI
-  states the initial status is "belum bayar".
+- In `track_status`, new contributions default to pending. The create request omits payment fields and the UI states
+  the initial status is "belum bayar".
+- In `paid_only`, the add form collects an active event account, a WIB payment time, and optional payment notes in the
+  same create request. The backend creates the contribution as paid atomically; the UI does not open a second payment
+  dialog. Only backend response status and payment metadata are displayed.
 - **Status is `pending` or `paid` and is owned by the backend.** There is no partial status, instalment or overpayment.
   The UI never sends `payment_status` (a different value is `422 payment_status_not_editable`) and never computes it.
   `paid_at` is set by the backend; the UI shows it only when the row is `paid` and `paid_at` is non-null.
-- Editing sends **only the changed fields**. The **amount is locked while paid** (`409 paid_contribution_amount_locked`):
-  the edit dialog disables the field and sends only notes; cancel the payment first to change the bill.
+- Editing sends **only the changed fields**. A paid `paid_only` contribution may have its amount changed after explicit
+  confirmation; the backend preserves `paid`, `paid_at`, payment notes, and the account snapshot, and recalculates the
+  summary from the new amount. The edit form sends only `amount` (and `notes` only if independently changed). For a paid
+  `track_status` contribution, the amount remains locked (`409 paid_contribution_amount_locked`) until its payment is
+  cancelled. Pending contributions in `track_status` remain editable as before.
 - Removing a contribution requires confirmation; the friend master record is kept. A paid contribution, or one whose
   payment was ever cancelled, cannot be removed (`409 contribution_has_payments`); the dialog explains it. Deleting an
   **event** also deletes its contributions and payments and says so.
@@ -95,6 +103,17 @@ described only as far as the frontend code, types and tests reveal it.
   `pending` and its payment info disappears; rows and summary are refreshed. Cancelling works even if the account has
   since been deactivated. The backend keeps the cancelled payment as history; the app has no UI for it. There is no
   edit of a recorded payment (cancel and record again) and no hard delete anywhere.
+- These cancel rules apply to `track_status`. For `paid_only`, cancellation is rejected by the backend and the UI
+  hides payment and delete actions. Amount corrections use the confirmed edit flow above, which preserves the recorded
+  payment details. Event deletion remains available with explicit confirmation and cascades all contribution history.
+
+### Event payment modes
+
+- `track_status` preserves the pending-then-record flow and its paid/pending status filter, cancel confirmation, and
+  full backend summary (billed, received, pending, counts, and account receipts).
+- `paid_only` records only already-paid participants. The form requires an active account currently available to the
+  event, sends `paid_at` as a timezone-aware WIB timestamp, and optionally sends `payment_notes`. Its summary shows
+  backend participant count, received amount, progress when supplied, and account receipts without pending figures.
 
 ## 5. Public pages and privacy
 
@@ -138,7 +157,8 @@ The frontend validates before sending to give fast feedback. **The backend is au
 
 Optional text fields: blank input becomes `null` (`emptyToNull`) so the value is cleared rather than stored as an
 empty string. PATCH bodies may omit fields; per the type comments, `name`/`title`/`status`/`is_public`/`amount`/
-`payment_status` must not be sent as `null`; the app does not send `payment_status` at all, nor `amount` for a paid contribution.
+`payment_status` must not be sent as `null`; the app does not send `payment_status` at all. Paid contribution `amount`
+is sent only for `paid_only` after confirmation; `track_status` paid amounts remain locked.
 
 ## 7. Formatting (Indonesian locale)
 

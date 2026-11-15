@@ -125,10 +125,14 @@ export function EventDetailPage() {
 
       <div className="space-y-6">
         <Card className="p-4 sm:p-5">
-          <dl className="grid gap-4 text-sm sm:grid-cols-3">
+          <dl className="grid gap-4 text-sm sm:grid-cols-4">
             <div className="sm:col-span-2">
               <dt className="text-stone-500">Deskripsi</dt>
               <dd className="mt-1 whitespace-pre-line text-stone-800">{e.description || '-'}</dd>
+            </div>
+            <div>
+              <dt className="text-stone-500">Mode pembayaran</dt>
+              <dd className="mt-1 font-medium text-stone-900">{e.payment_mode === 'paid_only' ? 'Catat yang sudah lunas saja' : 'Pantau status pembayaran'}</dd>
             </div>
             <div>
               <dt className="text-stone-500">Target dana</dt>
@@ -181,7 +185,7 @@ export function EventDetailPage() {
             <ErrorState error={summary.error} title="Gagal memuat ringkasan" onRetry={() => void summary.refetch()} />
           </Card>
         ) : (
-          <EventSummaryPanel summary={summary.data} />
+          <EventSummaryPanel summary={summary.data} paymentMode={e.payment_mode} />
         )}
 
         <EventPaymentAccounts eventId={eventId} />
@@ -189,8 +193,8 @@ export function EventDetailPage() {
         <Card>
           <CardHeader
             title="Peserta"
-            description="Setiap peserta punya satu iuran dan satu pembayaran. Status menjadi lunas setelah pembayaran dicatat."
-            actions={<Button onClick={() => setAddOpen(true)}>Tambah peserta</Button>}
+            description={e.payment_mode === 'paid_only' ? 'Setiap peserta dicatat sekaligus dengan pembayaran yang sudah diterima.' : 'Setiap peserta punya satu iuran. Status menjadi lunas setelah pembayaran dicatat.'}
+            actions={<Button onClick={() => setAddOpen(true)}>{e.payment_mode === 'paid_only' ? 'Catat iuran' : 'Tambah peserta'}</Button>}
           />
           {contributions.isPending ? (
             <LoadingState label="Memuat peserta…" />
@@ -200,11 +204,11 @@ export function EventDetailPage() {
             <EmptyState
               title="Belum ada peserta"
               description="Tambahkan teman dari daftar teman untuk mulai mencatat iuran."
-              action={<Button onClick={() => setAddOpen(true)}>Tambah peserta</Button>}
+              action={<Button onClick={() => setAddOpen(true)}>{e.payment_mode === 'paid_only' ? 'Catat iuran' : 'Tambah peserta'}</Button>}
             />
           ) : (
             <>
-              <div role="group" aria-label="Saring status pembayaran" className="flex gap-1 border-b border-stone-100 px-4 py-2">
+              {e.payment_mode === 'track_status' && <div role="group" aria-label="Saring status pembayaran" className="flex gap-1 border-b border-stone-100 px-4 py-2">
                 {FILTERS.map((f) => (
                   <button
                     key={f.value}
@@ -219,12 +223,13 @@ export function EventDetailPage() {
                     {f.label}
                   </button>
                 ))}
-              </div>
+              </div>}
               {visible.length === 0 ? (
                 <EmptyState title="Tidak ada peserta dengan status ini" />
               ) : (
                 <ContributionsTable
                   contributions={visible}
+                  paymentMode={e.payment_mode}
                   onPayments={(c) => setPayingId(c.id)}
                   onEdit={setEditing}
                   onDelete={setRemoving}
@@ -238,6 +243,7 @@ export function EventDetailPage() {
       <EventFormDialog
         open={editOpen}
         event={e}
+        paymentModeLocked={contributions.isPending || contributions.isError || summary.isPending || summary.isError || allContributions.length > 0 || (summary.data?.total_participants ?? 0) > 0}
         onClose={() => setEditOpen(false)}
         onSubmit={async (body) => {
           await updateEvent.mutateAsync(body)
@@ -250,15 +256,18 @@ export function EventDetailPage() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         existingFriendIds={existingFriendIds}
+        eventId={eventId}
+        paymentMode={e.payment_mode}
         onSubmit={async (body) => {
           const created = await addContribution.mutateAsync(body)
-          toast.success(`${created.friend.name} ditambahkan ke acara.`)
+          toast.success(e.payment_mode === 'paid_only' ? `Iuran ${created.friend.name} berhasil dicatat dan berstatus lunas.` : `${created.friend.name} ditambahkan ke acara.`)
           setAddOpen(false)
         }}
       />
 
       <EditContributionDialog
         contribution={editing}
+        paymentMode={e.payment_mode}
         onClose={() => setEditing(null)}
         onSubmit={async (id, body) => {
           await updateContribution.mutateAsync({ id, body })

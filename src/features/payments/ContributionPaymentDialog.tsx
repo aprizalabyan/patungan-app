@@ -197,7 +197,7 @@ function PaidDetails({ contribution }: { contribution: Contribution }) {
       {contribution.payment_notes && (
         <div>
           <dt className="text-stone-500">Catatan pembayaran</dt>
-          <dd className="mt-1 break-words text-stone-800">{contribution.payment_notes}</dd>
+        <dd className="mt-1 wrap-break-word text-stone-800">{contribution.payment_notes}</dd>
         </div>
       )}
     </dl>
