@@ -75,7 +75,7 @@ export function ContributionsTable({
           <Button size="sm" variant="secondary" onClick={() => onEdit(c)} aria-label={`Ubah iuran ${c.friend.name}`}>
             Ubah
           </Button>
-          {paymentMode === 'track_status' && <Button
+          <Button
             size="sm"
             variant="secondary"
             className="text-red-700 hover:bg-red-50"
@@ -83,7 +83,7 @@ export function ContributionsTable({
             aria-label={`Hapus ${c.friend.name} dari acara`}
           >
             Hapus
-          </Button>}
+          </Button>
         </div>
       ),
     },

@@ -114,7 +114,7 @@ Hooks (all in `features/*/use*.ts`) wrap `services/*`. Components must use these
 | Create event | seed `detail`; invalidate event lists and `everything` |
 | Update event | set `detail`; invalidate lists, `everything` and `summary(id)` (target drives progress) |
 | Delete event | remove `detail`, `summary`, `contributions`, `paymentAccounts` for the id; invalidate lists and `everything` |
-| Add / delete contribution | invalidate `contributions(eventId)` **and** `summary(eventId)` |
+| Add / delete contribution | invalidate the event's `contributions`, `summary`, `detail`, event lists, and `everything` queries |
 | Update contribution | write the returned row into cached contribution lists (shows `paid_at` immediately), then invalidate both as above |
 | Create payment account | invalidate `['payment-accounts']` |
 | Update / (de)activate payment account | invalidate `['payment-accounts']`, every event's account list and all event summaries (breakdown shows the current identity) |

@@ -159,7 +159,6 @@ Error codes the frontend knows about:
 | `contribution_already_paid` | 409 | Recording on a paid contribution (another session paid first); rows and summary refetched |
 | `contribution_not_paid` | 409 | Cancelling a pending contribution; rows and summary refetched |
 | `paid_contribution_amount_locked` | 409 | Changing `amount` while paid in `track_status`; cancel that payment first |
-| `contribution_has_payments` | 409 | Participant is paid or ever had a payment cancelled; cannot be removed |
 | `payment_status_not_editable` | 422 | Mapped only; the app never sends `payment_status` |
 | `duplicate_payment_account` | 422 | Repeated account id in the event set (the picker cannot produce it) |
 

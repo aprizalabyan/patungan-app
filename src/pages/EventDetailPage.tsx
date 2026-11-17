@@ -25,6 +25,7 @@ import {
 } from '@/features/events/useEvents'
 import { ContributionPaymentDialog } from '@/features/payments/ContributionPaymentDialog'
 import { EventPaymentAccounts } from '@/features/payments/EventPaymentAccounts'
+import { PaymentAccountInfo } from '@/features/payments/PaymentAccountInfo'
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard'
 import { getErrorMessage, isNotFound } from '@/services/errors'
 import type { Contribution, PaymentStatus } from '@/types/api'
@@ -282,15 +283,24 @@ export function EventDetailPage() {
       <ConfirmDialog
         open={removing !== null}
         title="Hapus peserta?"
-        message={
-          removing && (
-            <>
-              Iuran <strong>{removing.friend.name}</strong> ({formatRupiah(removing.amount)}) akan dihapus dari acara
-              ini. Data teman di daftar teman tidak terhapus. Peserta yang sudah membayar atau pernah memiliki pembayaran
-              yang dibatalkan tidak dapat dihapus.
-            </>
-          )
-        }
+        message={removing && removing.payment_status === 'paid' ? (
+          <div className="space-y-3">
+            <p>Peserta: <strong>{removing.friend.name}</strong></p>
+            <p>Nominal iuran: <strong>{formatRupiah(removing.amount)}</strong></p>
+            <div>
+              <p className="text-stone-500">Rekening tujuan</p>
+              {removing.payment_account ? <PaymentAccountInfo account={removing.payment_account} /> : <p className="font-medium text-stone-900">Rekening tidak tercatat</p>}
+            </div>
+            <p>Status: <strong>Lunas</strong></p>
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800">Catatan pembayaran ikut dihapus dan total penerimaan acara akan berkurang.</p>
+          </div>
+        ) : removing ? (
+          <div className="space-y-3">
+            <p>Peserta: <strong>{removing.friend.name}</strong></p>
+            <p>Nominal tagihan: <strong>{formatRupiah(removing.amount)}</strong></p>
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-red-800">Peserta akan dihapus dari acara ini. Data teman di daftar teman tidak terhapus.</p>
+          </div>
+        ) : null}
         confirmLabel="Hapus peserta"
         loading={deleteContribution.isPending}
         error={deleteContribution.isError ? getErrorMessage(deleteContribution.error) : null}

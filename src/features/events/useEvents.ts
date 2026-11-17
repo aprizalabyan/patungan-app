@@ -164,6 +164,9 @@ export function invalidateContributionData(qc: QueryClient, eventId: string) {
   return Promise.all([
     qc.invalidateQueries({ queryKey: queryKeys.events.contributions(eventId) }),
     qc.invalidateQueries({ queryKey: queryKeys.events.summary(eventId) }),
+    qc.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) }),
+    qc.invalidateQueries({ queryKey: queryKeys.events.lists }),
+    qc.invalidateQueries({ queryKey: queryKeys.events.everything }),
   ])
 }
 

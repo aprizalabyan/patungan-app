@@ -71,8 +71,9 @@ described only as far as the frontend code, types and tests reveal it.
   The edit form sends only changed `amount`, `payment_account_id`, and/or `notes`; it never rewrites payment date/history.
   For a paid `track_status` contribution, the amount remains locked (`409 paid_contribution_amount_locked`) until its payment is
   cancelled. Pending contributions in `track_status` remain editable as before.
-- Removing a contribution requires confirmation; the friend master record is kept. A paid contribution, or one whose
-  payment was ever cancelled, cannot be removed (`409 contribution_has_payments`); the dialog explains it. Deleting an
+- Removing a contribution requires confirmation; the friend master record is kept. Pending and paid contributions can
+  both be removed. For a paid contribution, the dialog warns that its payment record is deleted and the event's
+  received total decreases. The backend also removes related payment archive rows in the same transaction. Deleting an
   **event** also deletes its contributions and payments and says so.
 - Notes are visible to the treasurer only.
 

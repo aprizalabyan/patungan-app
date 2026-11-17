@@ -50,8 +50,6 @@ const MESSAGES_BY_CODE: Record<string, string> = {
   contribution_not_paid: 'Iuran ini belum memiliki pembayaran yang bisa dibatalkan.',
   paid_contribution_amount_locked:
     'Nominal iuran tidak dapat diubah selama sudah dibayar. Batalkan pembayaran terlebih dahulu.',
-  contribution_has_payments:
-    'Peserta ini sudah membayar atau pernah memiliki pembayaran yang dibatalkan, sehingga tidak dapat dihapus demi menjaga riwayat keuangan.',
   payment_status_not_editable:
     'Status dicatat otomatis oleh pembayaran. Catat atau batalkan pembayaran untuk mengubahnya.',
   duplicate_payment_account: 'Ada rekening yang terpilih lebih dari satu kali. Periksa kembali pilihan Anda.',

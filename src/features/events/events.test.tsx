@@ -416,15 +416,40 @@ describe('event detail', () => {
     expect(await screen.findByText('009988')).toBeInTheDocument()
   })
 
-  it('explains that a contribution with payments cannot be deleted', async () => {
+  it('offers deletion for paid contributions and explains that payment data is removed', async () => {
+    const paid = makeContribution({
+      payment_status: 'paid',
+      paid_at: '2026-11-15T07:00:00Z',
+      payment_account: makePaymentAccount(),
+    })
+    const { calls, routes } = mockApi({
+      ...detailRoutes([paid]),
+      'GET /events/e-1': { body: makeEvent({ payment_mode: 'paid_only' }) },
+      'DELETE /contributions/c-1': { status: 204 },
+    })
+    renderApp('/events/e-1', { loggedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Hapus Budi Santoso dari acara' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Hapus peserta?' })
+    expect(within(dialog).getByText('Rp150.000')).toBeInTheDocument()
+    expect(within(dialog).getByText('Rekening tujuan')).toBeInTheDocument()
+    expect(within(dialog).getByText('BRI')).toBeInTheDocument()
+    expect(within(dialog).getByText(/Catatan pembayaran ikut dihapus/)).toBeInTheDocument()
+    routes['GET /events/e-1/contributions'] = { body: page([], 0, 1, 100) }
+    routes['GET /events/e-1/summary'] = { body: makeSummary({ total_participants: 0, paid_count: 0, total_contributions: 0, total_received: 0, total_collected: 0 }) }
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Hapus peserta' }))
+    expect(await screen.findByText('Belum ada peserta')).toBeInTheDocument()
+    expect(calls.some((c) => c.method === 'DELETE' && c.path === '/contributions/c-1')).toBe(true)
+  })
+
+  it('shows backend errors when deleting a contribution fails', async () => {
     mockApi({
       ...detailRoutes(),
-      'DELETE /contributions/c-1': apiError(409, 'contribution_has_payments'),
+      'DELETE /contributions/c-1': apiError(403, 'forbidden'),
     })
     renderApp('/events/e-1', { loggedIn: true })
     await userEvent.click(await screen.findByRole('button', { name: 'Hapus Budi Santoso dari acara' }))
     const dialog = await screen.findByRole('dialog', { name: 'Hapus peserta?' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Hapus peserta' }))
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent('pembayaran yang dibatalkan')
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Terjadi kesalahan')
   })
 })
