@@ -267,6 +267,7 @@ export function EventDetailPage() {
 
       <EditContributionDialog
         contribution={editing}
+        eventId={eventId}
         paymentMode={e.payment_mode}
         onClose={() => setEditing(null)}
         onSubmit={async (id, body) => {

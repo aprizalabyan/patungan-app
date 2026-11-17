@@ -373,7 +373,7 @@ describe('event detail', () => {
 
     const confirm = await screen.findByRole('dialog', { name: 'Konfirmasi perubahan nominal?' })
     expect(calls.some((call) => call.method === 'PATCH' && call.path === '/contributions/c-1')).toBe(false)
-    expect(within(confirm).getByText(/rekening, dan waktu pembayaran akan tetap dipertahankan/)).toBeInTheDocument()
+    expect(within(confirm).getByText(/Status lunas dan waktu pembayaran akan tetap dipertahankan; rekening tidak berubah/)).toBeInTheDocument()
     routes['GET /events/e-1/contributions'] = { body: page([makeContribution({ ...paid, amount: 175_000 })]) }
     routes['GET /events/e-1/summary'] = { body: makeSummary({ total_participants: 1, paid_count: 1, pending_count: 0, total_contributions: 175_000, total_received: 175_000, total_collected: 175_000, total_pending: 0 }) }
     await userEvent.click(within(confirm).getByRole('button', { name: 'Simpan perubahan' }))
@@ -386,6 +386,34 @@ describe('event detail', () => {
     expect(within(summary).getAllByText('Rp175.000').length).toBeGreaterThan(0)
     expect(calls.find((call) => call.method === 'PATCH' && call.path === '/contributions/c-1')?.body).not.toHaveProperty('paid_at')
     expect(calls.find((call) => call.method === 'PATCH' && call.path === '/contributions/c-1')?.body).not.toHaveProperty('payment_account_id')
+  })
+
+  it('changes a paid_only contribution account without changing payment status or date', async () => {
+    const paid = makeContribution({
+      payment_status: 'paid',
+      paid_at: '2026-11-15T07:00:00Z',
+      payment_account: {
+        id: 'a-1', type: 'bank', provider_name: 'BRI', account_name: 'Aprizal', account_number: '0012345678', label: null,
+      },
+    })
+    const replacement = makePaymentAccount({ id: 'a-2', provider_name: 'BCA', account_name: 'Aprizal', account_number: '009988' })
+    const { calls } = mockApi({
+      ...detailRoutes([paid]),
+      'GET /events/e-1': { body: makeEvent({ payment_mode: 'paid_only' }) },
+      'GET /events/e-1/payment-accounts': { body: [makePaymentAccount(), replacement] },
+      'PATCH /contributions/c-1': { body: makeContribution({ ...paid, payment_account: { ...replacement } }) },
+    })
+    renderApp('/events/e-1', { loggedIn: true })
+    await userEvent.click(await screen.findByRole('button', { name: 'Ubah iuran Budi Santoso' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Ubah iuran' })
+    await userEvent.selectOptions(await within(dialog).findByLabelText('Rekening tujuan'), 'a-2')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Simpan' }))
+
+    await waitFor(() => expect(calls.find((call) => call.method === 'PATCH' && call.path === '/contributions/c-1')?.body).toEqual({ payment_account_id: 'a-2' }))
+    expect(calls.find((call) => call.method === 'PATCH' && call.path === '/contributions/c-1')?.body).not.toHaveProperty('payment_status')
+    expect(calls.find((call) => call.method === 'PATCH' && call.path === '/contributions/c-1')?.body).not.toHaveProperty('paid_at')
+    expect(await screen.findByText('Lunas')).toBeInTheDocument()
+    expect(await screen.findByText('009988')).toBeInTheDocument()
   })
 
   it('explains that a contribution with payments cannot be deleted', async () => {

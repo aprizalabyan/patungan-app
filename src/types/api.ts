@@ -183,11 +183,13 @@ export interface ContributionCreate {
 }
 
 /**
- * `amount` may be omitted but must not be null. Paid amount edits are allowed only for paid_only events.
- * Send only changed fields. The app never sends `payment_status` (422 when it differs).
+ * Send only changed fields. Paid_only contributions may update amount and/or payment_account_id while preserving
+ * payment status and history; payment_account_id must identify an active account available to the event.
+ * The app never sends `payment_status` (422 when it differs).
  */
 export interface ContributionUpdate {
   amount?: number
+  payment_account_id?: UUID
   notes?: string | null
 }
 

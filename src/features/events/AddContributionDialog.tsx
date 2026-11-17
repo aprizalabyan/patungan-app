@@ -64,7 +64,7 @@ function AddContributionForm({
 }) {
   const [search, setSearch] = useState('')
   const debounced = useDebouncedValue(search.trim(), 300)
-  const friends = useFriendsList({ search: debounced || undefined, page: 1, page_size: 20 })
+  const friends = useFriendsList({ search: debounced || undefined, page: 1, page_size: 40 })
   const accounts = useEventPaymentAccounts(eventId, paidOnly)
   const activeAccounts = (accounts.data ?? []).filter((account) => account.is_active)
   const [friendId, setFriendId] = useState<string | null>(null)

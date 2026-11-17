@@ -66,9 +66,10 @@ described only as far as the frontend code, types and tests reveal it.
   The UI never sends `payment_status` (a different value is `422 payment_status_not_editable`) and never computes it.
   `paid_at` is set by the backend; the UI shows it only when the row is `paid` and `paid_at` is non-null.
 - Editing sends **only the changed fields**. A paid `paid_only` contribution may have its amount changed after explicit
-  confirmation; the backend preserves `paid`, `paid_at`, payment notes, and the account snapshot, and recalculates the
-  summary from the new amount. The edit form sends only `amount` (and `notes` only if independently changed). For a paid
-  `track_status` contribution, the amount remains locked (`409 paid_contribution_amount_locked`) until its payment is
+  confirmation or its destination account changed; the backend preserves `paid`, `paid_at`, amount (for an account-only
+  change), and payment history. A replacement account must be active, available to the event, and owned by the treasurer.
+  The edit form sends only changed `amount`, `payment_account_id`, and/or `notes`; it never rewrites payment date/history.
+  For a paid `track_status` contribution, the amount remains locked (`409 paid_contribution_amount_locked`) until its payment is
   cancelled. Pending contributions in `track_status` remain editable as before.
 - Removing a contribution requires confirmation; the friend master record is kept. A paid contribution, or one whose
   payment was ever cancelled, cannot be removed (`409 contribution_has_payments`); the dialog explains it. Deleting an

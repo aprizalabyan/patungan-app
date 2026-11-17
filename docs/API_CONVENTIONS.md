@@ -70,7 +70,7 @@ Paths are relative to the base URL. "Auth" = needs Bearer token. Service functio
 | `GET /events/{event_id}/summary` | `summary` | → `EventSummary` |
 | `GET /events/{event_id}/contributions` | `contributionsService.list` | query `ContributionListParams {page?, page_size?, payment_status?}` → `Page<Contribution>` |
 | `POST /events/{event_id}/contributions` | `create` | `ContributionCreate {friend_id, amount, notes?, payment_account_id?, paid_at?, payment_notes?}` → `Contribution`; payment fields are sent only for `paid_only`, which creates a paid row atomically |
-| `PATCH /contributions/{contribution_id}` | `update` | `ContributionUpdate` → `Contribution`; changing `amount` is supported while paid only for `paid_only` events, with payment metadata preserved |
+| `PATCH /contributions/{contribution_id}` | `update` | `ContributionUpdate {amount?, payment_status?, payment_account_id?, notes?}` → `Contribution`; in `paid_only`, paid contribution `amount` and `payment_account_id` can be edited while payment status/date/history are preserved; replacement account must be active, available to the event and owned by the treasurer |
 | `DELETE /contributions/{contribution_id}` | `remove` | → 204 |
 
 ### Payment accounts and the contribution payment (`paymentsService.ts`), all authenticated

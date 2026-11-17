@@ -25,7 +25,7 @@ The treasurer can: log in; manage the master list of friends; create, edit, dele
 `paid_only` payment mode; add friends to events with a contribution amount; manage payment accounts (bank / e-wallet)
 and choose which ones an event accepts; record payments immediately in `paid_only`, or record/cancel the single payment
 later in `track_status` (the payment always equals the bill); edit pending contribution amounts and notes, and edit
-paid `paid_only` amounts with confirmation while retaining their payment metadata;
+paid `paid_only` amounts with confirmation or change their destination account while retaining payment status, date and history;
 remove contributions that were never paid; review financial summaries including receipts per account; copy the public event link; copy a WhatsApp-ready summary.
 
 Out of scope for this repo: backend code, database configuration, user registration, password reset, payments
